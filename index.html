@@ -91,14 +91,6 @@
       </svg>
       Peças
     </button>
-    <button @click="page='trends'; fetchTrends()"
-      class="flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-medium tracking-widest uppercase transition-colors"
-      :class="page==='trends' ? 'text-ink' : 'text-ink-faint'">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
-      </svg>
-      Moda
-    </button>
     <button @click="page='calc'"
       class="flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-medium tracking-widest uppercase transition-colors"
       :class="page==='calc' ? 'text-ink' : 'text-ink-faint'">
@@ -696,82 +688,6 @@
       </div>
     </div>
 
-    <!-- ===== TENDÊNCIAS ===== -->
-    <div x-show="page === 'trends'" class="px-4 mt-3 pb-4 space-y-4">
-
-      <!-- Header com botão atualizar -->
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Mercado Livre · Brasil</p>
-          <p class="text-xs text-ink-faint mt-0.5">Intenção de compra em moda agora</p>
-        </div>
-        <button @click="fetchTrends()" class="border border-warm p-2.5 text-ink-faint hover:text-ink hover:border-ink transition-colors flex-shrink-0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Loading -->
-      <div x-show="trendsLoading" class="text-center py-12 text-ink-faint text-sm flex flex-col items-center gap-3">
-        <svg class="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-        Consultando Mercado Livre…
-      </div>
-
-      <!-- Erro -->
-      <div x-show="trendsError && !trendsLoading" class="text-center py-12 text-ink-faint">
-        <p class="font-serif text-3xl mb-2">—</p>
-        <p class="text-sm">Não foi possível carregar as tendências agora.</p>
-        <button @click="fetchTrends()" class="mt-3 text-xs border border-warm px-3 py-1.5 hover:border-ink hover:text-ink transition-colors">Tentar novamente</button>
-      </div>
-
-      <!-- Seção 1: buscas em alta com moda -->
-      <template x-if="!trendsLoading && !trendsError && trendsItems.length > 0">
-        <div class="space-y-2">
-          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Buscas em alta — moda</p>
-          <div class="bg-white border border-warm divide-y divide-cream-dark">
-            <template x-for="(item, index) in trendsItems" :key="index">
-              <a :href="'https://www.mercadolivre.com.br/' + item.keyword.replace(/ /g,'+')" target="_blank"
-                class="flex items-center gap-4 px-4 py-3.5 hover:bg-cream transition-colors">
-                <span class="font-serif text-lg text-ink-faint w-6 text-center flex-shrink-0" x-text="index + 1"></span>
-                <p class="flex-1 text-sm font-medium text-ink truncate capitalize" x-text="item.keyword"></p>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="text-ink-faint flex-shrink-0">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                </svg>
-              </a>
-            </template>
-          </div>
-        </div>
-      </template>
-
-      <!-- Seção 2: mais buscados em roupas/acessórios -->
-      <template x-if="!trendsLoading && !trendsError && trendsCatItems.length > 0">
-        <div class="space-y-2">
-          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Mais relevantes em roupas</p>
-          <div class="bg-white border border-warm divide-y divide-cream-dark">
-            <template x-for="(item, index) in trendsCatItems" :key="item.id">
-              <a :href="item.permalink" target="_blank"
-                class="flex items-start gap-3 px-4 py-3.5 hover:bg-cream transition-colors">
-                <span class="font-serif text-lg text-ink-faint w-6 text-center flex-shrink-0 mt-0.5" x-text="index + 1"></span>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-ink leading-snug" x-text="item.title"></p>
-                  <p class="text-xs text-ink-faint mt-0.5" x-text="'R$ ' + item.price?.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})"></p>
-                </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="text-ink-faint flex-shrink-0 mt-1">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                </svg>
-              </a>
-            </template>
-          </div>
-        </div>
-      </template>
-
-      <!-- Nota -->
-      <p x-show="!trendsLoading && !trendsError" class="text-[10px] text-ink-faint text-center">
-        Fonte: Mercado Livre · Clique em qualquer item para ver no ML
-      </p>
-    </div>
-
     <!-- ===== CALCULADORA ===== -->
     <div x-show="page === 'calc'" class="px-4 mt-3 pb-4 space-y-4">
 
@@ -1070,10 +986,6 @@
         discountModal: { show: false, item: null, newPrice: '' },
         _lpTimer: null,
         menuDrawer: false,
-        trendsItems: [],
-        trendsCatItems: [],
-        trendsLoading: false,
-        trendsError: false,
         items: [],
         current: null,
         stats: { estoque: 0, vendidas: 0, investido: 0, lucro: 0, ajustes: 0, porStatus: {} },
@@ -1246,40 +1158,7 @@
         },
 
         pageTitle() {
-          return { dashboard: 'MeuBrechó', catalog: 'Catálogo', detail: 'Detalhes', form: this.form.id ? 'Editar' : 'Nova peça', calc: 'Calculadora', backup: 'Backup', trends: 'Tendências' }[this.page] || '';
-        },
-
-        async fetchTrends() {
-          if (this.trendsLoading) return;
-          this.trendsLoading = true;
-          this.trendsError = false;
-          this.trendsItems = [];
-          this.trendsCatItems = [];
-          const fashionKeywords = [
-            'roupa','roupas','vestido','calça','blusa','camisa','camiseta','tênis','sapato','sandália',
-            'moda','look','jaqueta','casaco','saia','shorts','conjunto','moletom','blazer',
-            'brechó','vintage','cropped','regata','blusão','body','legging','kimono',
-            'biquíni','maiô','sunga','bolsa','mochila','carteira','cinto',
-            'nike','adidas','zara','shein','renner','riachuelo','farm','animale','hering',
-            'sneaker','bota','sapatilha','scarpin','chinelo','sandália',
-          ];
-          try {
-            const [trendRes, catRes] = await Promise.all([
-              fetch('https://api.mercadolibre.com/trends/MLB', { signal: AbortSignal.timeout(8000) }),
-              fetch('https://api.mercadolibre.com/sites/MLB/search?category=MLB5672&sort=relevance&limit=15', { signal: AbortSignal.timeout(8000) }),
-            ]);
-            if (!trendRes.ok || !catRes.ok) throw new Error();
-            const trends = await trendRes.json();
-            const catData = await catRes.json();
-            const fashion = trends.filter(t =>
-              fashionKeywords.some(kw => t.keyword.toLowerCase().includes(kw))
-            );
-            this.trendsItems = fashion.slice(0, 12);
-            this.trendsCatItems = (catData.results || []).slice(0, 12);
-          } catch {
-            this.trendsError = true;
-          }
-          this.trendsLoading = false;
+          return { dashboard: 'MeuBrechó', catalog: 'Catálogo', detail: 'Detalhes', form: this.form.id ? 'Editar' : 'Nova peça', calc: 'Calculadora', backup: 'Backup' }[this.page] || '';
         },
 
         calcTarifaFixa(preco) {
