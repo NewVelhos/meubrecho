@@ -58,11 +58,11 @@
     <!-- Direita: nova peça -->
     <div class="flex-1 flex justify-end">
       <button x-show="page !== 'form'" @click="openForm(null)"
-        class="flex items-center gap-1.5 border border-ink text-ink text-xs font-medium tracking-widest uppercase px-3 py-1.5 hover:bg-ink hover:text-white transition-colors">
+        class="flex items-center gap-1.5 border border-ink text-ink text-xs font-medium tracking-widest uppercase px-3 py-1.5 hover:bg-ink hover:text-white transition-colors whitespace-nowrap">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
           <path d="M5 1v8M1 5h8"/>
         </svg>
-        Nova peça
+        Novo
       </button>
     </div>
   </header>
@@ -1132,7 +1132,7 @@
         },
 
         pageTitle() {
-          return { dashboard: 'MeuBrechó', catalog: 'Catálogo', detail: 'Detalhes', form: this.form.id ? 'Editar peça' : 'Nova peça', calc: 'Calculadora Enjoei', backup: 'Backup & Dados' }[this.page] || '';
+          return { dashboard: 'MeuBrechó', catalog: 'Catálogo', detail: 'Detalhes', form: this.form.id ? 'Editar' : 'Nova peça', calc: 'Calculadora', backup: 'Backup' }[this.page] || '';
         },
 
         calcTarifaFixa(preco) {
