@@ -684,6 +684,19 @@
         </div>
 
         <div>
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Transportadora</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="op in ['Correios','JadLog','Pegaki']" :key="op">
+              <button @click="filterState.frete = filterState.frete === op ? '' : op; loadItems()"
+                class="px-3 py-1.5 text-xs border transition-colors tracking-wide"
+                :class="filterState.frete === op ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm'">
+                <span x-text="op"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div>
           <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Foto</p>
           <div class="flex flex-wrap gap-2">
             <template x-for="f in [{label:'Com foto', value:'com'},{label:'Sem foto', value:'sem'}]" :key="f.value">
@@ -1053,7 +1066,7 @@
         soldValue: '',
         soldDate: '',
         filterModal: false,
-        filterState: { status: '', destinacao: '', condicao: '', marca: '', ajuste: false, foto: '' },
+        filterState: { status: '', destinacao: '', condicao: '', marca: '', ajuste: false, foto: '', frete: '' },
         sortField: 'id',
         sortDir: 'desc',
         brandOptions: [],
@@ -1342,6 +1355,7 @@
           if (f.ajuste)     all = all.filter(i => !!i.ajuste);
           if (f.foto === 'com') all = all.filter(i => !!i.foto);
           if (f.foto === 'sem') all = all.filter(i => !i.foto);
+          if (f.frete)      all = all.filter(i => i.frete === f.frete);
 
           const field = this.sortField;
           all.sort((a, b) => {
