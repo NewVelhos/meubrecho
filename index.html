@@ -291,6 +291,10 @@
                 <p class="text-xs font-medium text-ink" x-text="fmt(item.precoAnuncio || item.valorPago)"></p>
               </template>
               <span class="text-[10px] mt-0.5 inline-block" :class="statusColor(item.status)" x-text="item.status"></span>
+              <div x-show="item.frete" class="flex items-center gap-1 mt-0.5">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span class="text-[10px] text-ink-faint" x-text="item.frete"></span>
+              </div>
             </div>
           </div>
         </template>
@@ -328,6 +332,10 @@
                 </template>
                 <span x-show="item.valorVendido" class="text-xs text-emerald-700" x-text="'→ ' + fmt(item.valorVendido)"></span>
               </div>
+              <div x-show="item.frete" class="flex items-center gap-1 mt-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint flex-shrink-0"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span class="text-[10px] text-ink-faint" x-text="item.frete"></span>
+              </div>
               <p x-show="item.ajuste" class="text-[10px] text-amber-600 mt-1 tracking-wide">⚠ Ajuste pendente</p>
             </div>
           </div>
@@ -363,6 +371,10 @@
                   x-show="gridCols <= 3" x-text="item.status.slice(0,3)"></span>
               </div>
               <p x-show="item.ajuste && gridCols <= 2" class="text-[10px] text-amber-600 mt-0.5">⚠ Ajuste</p>
+              <div x-show="item.frete && gridCols <= 2" class="flex items-center gap-1 mt-0.5">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span class="text-[10px] text-ink-faint" x-text="item.frete"></span>
+              </div>
             </div>
           </div>
         </template>
@@ -575,6 +587,20 @@
               </div>
               <span class="text-sm text-ink-light">Enviado</span>
             </label>
+          </div>
+
+          <div x-show="form.status === 'Vendido'">
+            <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Transportadora</label>
+            <div class="grid grid-cols-3 gap-2">
+              <template x-for="op in ['Correios','JadLog','Pegaki']" :key="op">
+                <button type="button" @click="form.frete = form.frete === op ? '' : op"
+                  class="py-2.5 text-xs font-medium border tracking-wide transition-colors flex flex-col items-center gap-1.5"
+                  :class="form.frete === op ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-warm hover:border-ink'">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                  <span x-text="op"></span>
+                </button>
+              </template>
+            </div>
           </div>
 
           <div>
@@ -896,13 +922,18 @@
                   </div>
                 </div>
 
-                <!-- Enviado (só se Vendido) -->
+                <!-- Enviado + Frete (só se Vendido) -->
                 <template x-if="ctxMenu.item.status === 'Vendido'">
-                  <div>
-                    <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Envio</p>
+                  <div class="space-y-2">
+                    <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Envio</p>
                     <button @click="quickEnviado(ctxMenu.item)"
                       class="w-full border border-ink text-ink text-xs font-medium py-2.5 tracking-wide hover:bg-ink hover:text-white transition-colors">
                       Marcar como enviado
+                    </button>
+                    <button @click="ctxMenu.show=false; freteModal = { show: true, item: ctxMenu.item }"
+                      class="w-full border border-warm text-ink-light text-xs font-medium py-2.5 tracking-wide hover:border-ink hover:text-ink transition-colors flex items-center justify-center gap-2">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                      <span x-text="ctxMenu.item.frete ? ctxMenu.item.frete : 'Definir transportadora'"></span>
                     </button>
                   </div>
                 </template>
@@ -919,6 +950,32 @@
             </template>
           </div>
         </template>
+      </div>
+    </div>
+
+    <!-- ===== MODAL FRETE ===== -->
+    <div x-show="freteModal.show" class="fixed inset-0 bg-ink/40 flex items-end z-50 px-4 pb-6" @click.self="freteModal.show=false">
+      <div class="bg-white w-full p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-serif text-xl">Transportadora</h3>
+          <button @click="freteModal.show=false" class="text-ink-faint hover:text-ink">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <p class="text-xs text-ink-faint">Qual empresa vai fazer o envio desta peça?</p>
+        <div class="grid grid-cols-3 gap-2">
+          <template x-for="op in ['Correios','JadLog','Pegaki']" :key="op">
+            <button @click="saveFrete(freteModal.item, op)"
+              class="py-3 text-xs font-medium border tracking-wide transition-colors flex flex-col items-center gap-1.5"
+              :class="freteModal.item && freteModal.item.frete === op ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-warm hover:border-ink'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <span x-text="op"></span>
+            </button>
+          </template>
+        </div>
+        <button @click="saveFrete(freteModal.item, '')" class="w-full border border-warm text-ink-faint text-xs font-medium py-2.5 hover:border-ink hover:text-ink transition-colors">
+          Sem transportadora definida
+        </button>
       </div>
     </div>
 
@@ -984,6 +1041,7 @@
         navStack: [],
         ctxMenu: { show: false, item: null },
         discountModal: { show: false, item: null, newPrice: '' },
+        freteModal: { show: false, item: null },
         _lpTimer: null,
         menuDrawer: false,
         items: [],
@@ -1011,7 +1069,7 @@
           id: null, nome: '', foto: '', marca: '', tipo: '', tamanho: '', cor: '',
           condicao: '', destinacao: 'Vender', status: 'Estoque',
           valorPago: '', precoAnuncio: '', desconto: false, precoDesconto: '',
-          valorVendido: '', dataCompra: '', dataVenda: '', ajuste: false, ajusteObs: '', observacoes: '', enviado: false
+          valorVendido: '', dataCompra: '', dataVenda: '', ajuste: false, ajusteObs: '', observacoes: '', enviado: false, frete: ''
         },
 
         emptyForm() {
@@ -1019,7 +1077,7 @@
             id: null, nome: '', foto: '', marca: '', tipo: '', tamanho: '', cor: '',
             condicao: '', destinacao: 'Vender', status: 'Estoque',
             valorPago: '', precoAnuncio: '', desconto: false, precoDesconto: '',
-            valorVendido: '', dataCompra: '', dataVenda: '', ajuste: false, ajusteObs: '', observacoes: '', enviado: false
+            valorVendido: '', dataCompra: '', dataVenda: '', ajuste: false, ajusteObs: '', observacoes: '', enviado: false, frete: ''
           };
         },
 
@@ -1227,10 +1285,20 @@
         async quickStatus(item, status) {
           const updated = { ...item, status };
           if (status === 'Vendido' && !item.dataVenda) updated.dataVenda = new Date().toISOString().slice(0, 10);
-          if (status !== 'Vendido') { updated.valorVendido = null; updated.dataVenda = ''; updated.enviado = false; }
+          if (status !== 'Vendido') { updated.valorVendido = null; updated.dataVenda = ''; updated.enviado = false; updated.frete = ''; }
           await db.items.put(updated);
           await this.loadItems(); await this.loadStats(); await this.buildChart();
           this.ctxMenu = { show: false, item: updated };
+          if (status === 'Vendido') this.freteModal = { show: true, item: updated };
+        },
+
+        async saveFrete(item, frete) {
+          if (!item) return;
+          const updated = { ...item, frete };
+          await db.items.put(updated);
+          await this.loadItems();
+          if (this.current?.id === item.id) this.current = updated;
+          this.freteModal.show = false;
         },
 
         async quickEnviado(item) {
@@ -1415,6 +1483,7 @@
             ['Data da venda', c.dataVenda ? new Date(c.dataVenda + 'T12:00').toLocaleDateString('pt-BR') : null],
             ['Ajuste necessário', c.ajuste ? (c.ajusteObs || 'Sim') : null],
             ['Enviado', c.enviado ? 'Sim' : null],
+            ['Transportadora', c.frete || null],
           ];
         },
 
