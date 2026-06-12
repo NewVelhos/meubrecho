@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>MeuBrechó</title>
   <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-512.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
   <meta name="theme-color" content="#1C1C1C" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -58,11 +60,10 @@
     <!-- Direita: novo + menu -->
     <div class="flex-1 flex justify-end items-center gap-2">
       <button x-show="page !== 'form'" @click="openForm(null)"
-        class="flex items-center gap-1.5 border border-ink text-ink text-xs font-medium tracking-widest uppercase px-3 py-1.5 hover:bg-ink hover:text-white transition-colors whitespace-nowrap">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        class="flex items-center justify-center border border-ink text-ink w-8 h-8 hover:bg-ink hover:text-white transition-colors">
+        <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
           <path d="M5 1v8M1 5h8"/>
         </svg>
-        Novo
       </button>
       <!-- Hambúrguer -->
       <button @click="menuDrawer = true" class="text-ink-light hover:text-ink transition-colors flex-shrink-0 ml-1">
@@ -1034,6 +1035,7 @@
   <script>
     const db = new Dexie('brecho');
     db.version(1).stores({ items: '++id, status, tipo, destinacao, ajuste' });
+    db.version(2).stores({ items: '++id, status, tipo, destinacao, ajuste', bazares: '++id, tipo, favorito' });
 
     function app() {
       return {
@@ -1309,7 +1311,7 @@
         },
 
         async marcarDevolvida(item) {
-          const updated = { ...item, status: 'Anunciado', enviado: false, valorVendido: null, dataVenda: '' };
+          const updated = { ...item, status: 'Anunciado', enviado: false, valorVendido: null, dataVenda: '', frete: '' };
           await db.items.put(updated);
           await this.loadItems(); await this.loadStats(); await this.buildChart();
           this.ctxMenu.show = false;
@@ -1390,22 +1392,26 @@
         },
 
         async saveItem() {
-          const data = { ...this.form };
-          data.valorPago = parseFloat(data.valorPago) || 0;
-          data.valorVendido = data.status === 'Vendido' ? (parseFloat(data.valorVendido) || 0) : null;
-          if (data.status === 'Vendido' && !data.dataVenda) data.dataVenda = new Date().toISOString().slice(0, 10);
-          if (data.status !== 'Vendido') data.dataVenda = '';
-          if (data.id) {
-            await db.items.put(data);
-          } else {
-            delete data.id;
-            await db.items.add(data);
+          try {
+            const data = { ...this.form };
+            data.valorPago = parseFloat(data.valorPago) || 0;
+            data.valorVendido = data.status === 'Vendido' ? (parseFloat(data.valorVendido) || 0) : null;
+            if (data.status === 'Vendido' && !data.dataVenda) data.dataVenda = new Date().toISOString().slice(0, 10);
+            if (data.status !== 'Vendido') data.dataVenda = '';
+            if (data.id) {
+              await db.items.put(data);
+            } else {
+              delete data.id;
+              await db.items.add(data);
+            }
+            await this.loadItems();
+            await this.loadStats();
+            await this.loadBrands();
+            await this.buildChart();
+            this.page = this.navStack.pop() || 'catalog';
+          } catch(e) {
+            alert('Erro ao salvar: ' + e.message);
           }
-          await this.loadItems();
-          await this.loadStats();
-          await this.loadBrands();
-          await this.buildChart();
-          this.page = this.navStack.pop() || 'catalog';
         },
 
         async deleteItem() {
