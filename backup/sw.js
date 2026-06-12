@@ -1,4 +1,4 @@
-const CACHE = 'brecho-v2';
+const CACHE = 'brecho-v1';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -14,14 +14,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Sempre tenta a rede primeiro; só usa cache se estiver offline
   e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      })
-      .catch(() => caches.match(e.request))
+    caches.match(e.request).then(r => r || fetch(e.request))
   );
 });
