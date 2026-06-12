@@ -1,0 +1,16 @@
+{
+  "name": "Brechó App",
+  "short_name": "Brechó",
+  "description": "Catálogo de roupas de brechó",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fdf4ff",
+  "theme_color": "#a855f7",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

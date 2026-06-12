@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>MeuBrechó</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1C1C1C" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream:  { DEFAULT: '#F7F4F0', dark: '#EDE8E0' },
+            ink:    { DEFAULT: '#1C1C1C', light: '#6B6B6B', faint: '#B8B0A4' },
+            warm:   '#E8E2D9',
+          },
+          fontFamily: {
+            serif: ['"Playfair Display"', 'Georgia', 'serif'],
+            sans:  ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/dexie@3/dist/dexie.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/alpinejs@3/dist/cdn.min.js" defer></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .font-serif { font-family: 'Playfair Display', Georgia, serif; }
+    input, select, textarea { font-size: 16px !important; }
+    .nav-icon { width: 20px; height: 20px; }
+  </style>
+</head>
+<body class="bg-cream text-ink min-h-screen" x-data="app()" x-cloak>
+
+  <!-- Header -->
+  <header class="bg-white border-b border-warm px-5 py-3.5 flex items-center sticky top-0 z-10">
+    <!-- Esquerda: voltar ou nome da seção -->
+    <div class="flex-1 flex items-center gap-2">
+      <button x-show="page !== 'dashboard' && page !== 'catalog'" @click="back()" class="text-ink-light hover:text-ink transition-colors flex-shrink-0">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M5 12l7-7M5 12l7 7"/>
+        </svg>
+      </button>
+      <span x-show="page !== 'dashboard'"
+        class="text-[10px] font-medium tracking-widest uppercase text-ink-faint"
+        x-text="pageTitle()"></span>
+    </div>
+    <!-- Centro: marca -->
+    <h1 class="font-serif text-xl font-medium tracking-wider text-ink absolute left-1/2 -translate-x-1/2">MeuBrechó</h1>
+    <!-- Direita: nova peça -->
+    <div class="flex-1 flex justify-end">
+      <button x-show="page !== 'form'" @click="openForm(null)"
+        class="flex items-center gap-1.5 border border-ink text-ink text-xs font-medium tracking-widest uppercase px-3 py-1.5 hover:bg-ink hover:text-white transition-colors">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M5 1v8M1 5h8"/>
+        </svg>
+        Nova peça
+      </button>
+    </div>
+  </header>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-warm flex z-30">
+    <button @click="page='dashboard'; buildChart()"
+      class="flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-medium tracking-widest uppercase transition-colors"
+      :class="page==='dashboard' ? 'text-ink' : 'text-ink-faint'">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <rect x="3" y="12" width="4" height="9" rx="0.5"/><rect x="10" y="7" width="4" height="14" rx="0.5"/><rect x="17" y="3" width="4" height="18" rx="0.5"/>
+      </svg>
+      Início
+    </button>
+    <button @click="page='catalog'"
+      class="flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-medium tracking-widest uppercase transition-colors"
+      :class="page==='catalog' ? 'text-ink' : 'text-ink-faint'">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.57a2 2 0 0 0-1.34-2.23z"/>
+      </svg>
+      Peças
+    </button>
+    <button @click="page='calc'"
+      class="flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-medium tracking-widest uppercase transition-colors"
+      :class="page==='calc' ? 'text-ink' : 'text-ink-faint'">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="2" width="16" height="20" rx="2"/><rect x="7" y="5" width="10" height="4" rx="0.5"/>
+        <circle cx="8" cy="14" r="0.8" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="14" r="0.8" fill="currentColor" stroke="none"/>
+        <circle cx="16" cy="14" r="0.8" fill="currentColor" stroke="none"/>
+        <circle cx="8" cy="18" r="0.8" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="18" r="0.8" fill="currentColor" stroke="none"/>
+        <circle cx="16" cy="18" r="0.8" fill="currentColor" stroke="none"/>
+      </svg>
+      Calc
+    </button>
+    <button @click="page='backup'"
+      class="flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-medium tracking-widest uppercase transition-colors"
+      :class="page==='backup' ? 'text-ink' : 'text-ink-faint'">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Backup
+    </button>
+  </nav>
+
+  <main class="pb-20 pt-2">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div x-show="page === 'dashboard'" class="px-4 space-y-5 mt-3">
+
+      <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Resumo geral</p>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white border border-warm p-4">
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Em estoque</p>
+          <p class="font-serif text-3xl font-medium text-ink" x-text="stats.estoque"></p>
+          <p class="text-xs text-ink-light mt-0.5">peças</p>
+        </div>
+        <div class="bg-white border border-warm p-4">
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Vendidas</p>
+          <p class="font-serif text-3xl font-medium text-ink" x-text="stats.vendidas"></p>
+          <p class="text-xs text-ink-light mt-0.5">peças</p>
+        </div>
+        <div class="bg-white border border-warm p-4">
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Investido</p>
+          <p class="font-serif text-xl font-medium text-ink" x-text="fmt(stats.investido)"></p>
+          <p class="text-xs text-ink-light mt-0.5">total pago</p>
+        </div>
+        <div class="bg-white border border-warm p-4">
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Lucro</p>
+          <p class="font-serif text-xl font-medium" :class="stats.lucro >= 0 ? 'text-emerald-700' : 'text-red-600'" x-text="fmt(stats.lucro)"></p>
+          <p class="text-xs text-ink-light mt-0.5">nas vendas</p>
+        </div>
+      </div>
+
+      <div class="bg-white border border-warm p-4" x-show="stats.ajustes > 0">
+        <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Precisam de ajuste</p>
+        <p class="font-serif text-2xl font-medium text-amber-700" x-text="stats.ajustes"></p>
+        <p class="text-xs text-ink-light mt-0.5">peças pendentes</p>
+      </div>
+
+      <div class="bg-white border border-warm p-4">
+        <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-3">Por status</p>
+        <template x-for="[label, count] in Object.entries(stats.porStatus)" :key="label">
+          <div class="flex justify-between text-sm py-2 border-b border-cream-dark last:border-0">
+            <span class="text-ink-light" x-text="label"></span>
+            <span class="font-medium text-ink" x-text="count"></span>
+          </div>
+        </template>
+      </div>
+
+      <!-- Gráfico -->
+      <div class="bg-white border border-warm p-4">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Vendas por dia</p>
+          <div class="flex gap-1">
+            <template x-for="p in [{label:'7d',value:'week'},{label:'1m',value:'month'},{label:'3m',value:'quarter'},{label:'1a',value:'year'}]" :key="p.value">
+              <button @click="chartPeriod = p.value; buildChart()"
+                class="px-2 py-0.5 text-[10px] font-medium tracking-wide border transition-colors"
+                :class="chartPeriod === p.value ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm'">
+                <span x-text="p.label"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+        <div class="flex gap-4 mb-4 border-b border-warm">
+          <button @click="chartMetric='qtd'; buildChart()"
+            class="text-xs font-medium pb-2.5 border-b-[1.5px] transition-colors -mb-px"
+            :class="chartMetric==='qtd' ? 'border-ink text-ink' : 'border-transparent text-ink-faint'">
+            Quantidade
+          </button>
+          <button @click="chartMetric='valor'; buildChart()"
+            class="text-xs font-medium pb-2.5 border-b-[1.5px] transition-colors -mb-px"
+            :class="chartMetric==='valor' ? 'border-ink text-ink' : 'border-transparent text-ink-faint'">
+            Valor (R$)
+          </button>
+          <button @click="chartMetric='lucro'; buildChart()"
+            class="text-xs font-medium pb-2.5 border-b-[1.5px] transition-colors -mb-px"
+            :class="chartMetric==='lucro' ? 'border-ink text-ink' : 'border-transparent text-ink-faint'">
+            Lucro
+          </button>
+        </div>
+        <div x-show="chartEmpty" class="text-center py-8 text-ink-faint text-sm">Nenhuma venda no período</div>
+        <canvas id="salesChart" style="max-height:200px"></canvas>
+      </div>
+    </div>
+
+    <!-- ===== CATÁLOGO ===== -->
+    <div x-show="page === 'catalog'" class="px-4 mt-3 space-y-3">
+
+      <!-- Barra de filtro + sort -->
+      <div class="flex gap-2 items-center">
+        <button @click="filterModal = true"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium tracking-wide border transition-colors flex-1"
+          :class="hasActiveFilters() ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+          <span x-text="hasActiveFilters() ? 'Filtros ativos' : 'Filtrar'"></span>
+          <span x-show="hasActiveFilters()" @click.stop="clearFilters()" class="ml-auto font-bold">✕</span>
+        </button>
+
+        <select x-model="sortField" @change="loadItems()" class="border border-warm bg-white text-ink-light text-xs font-medium px-3 py-1.5 focus:outline-none focus:border-ink transition-colors">
+          <option value="id">Mais recente</option>
+          <option value="valorPago">Preço compra</option>
+          <option value="valorVendido">Preço venda</option>
+        </select>
+
+        <button @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'; loadItems()"
+          class="w-8 h-8 border border-warm bg-white flex items-center justify-center text-ink-light text-xs font-bold flex-shrink-0 hover:border-ink hover:text-ink transition-colors">
+          <span x-text="sortDir === 'asc' ? '↑' : '↓'"></span>
+        </button>
+      </div>
+
+      <!-- Barra de visualização -->
+      <div class="flex items-center gap-2">
+        <div class="flex border border-warm bg-white overflow-hidden">
+          <button @click="catalogView='compact'" class="px-3 py-1.5 text-sm transition-colors border-r border-warm"
+            :class="catalogView==='compact' ? 'bg-ink text-white' : 'text-ink-faint'">≡</button>
+          <button @click="catalogView='list'" class="px-3 py-1.5 text-sm transition-colors border-r border-warm"
+            :class="catalogView==='list' ? 'bg-ink text-white' : 'text-ink-faint'">☰</button>
+          <button @click="catalogView='grid'" class="px-3 py-1.5 text-sm transition-colors"
+            :class="catalogView==='grid' ? 'bg-ink text-white' : 'text-ink-faint'">⊞</button>
+        </div>
+        <div x-show="catalogView==='grid'" class="flex items-center gap-1 ml-auto">
+          <button @click="gridCols = Math.min(gridCols+1, 4)"
+            class="w-7 h-7 border border-warm bg-white flex items-center justify-center text-ink-light font-bold text-base leading-none hover:border-ink hover:text-ink transition-colors">−</button>
+          <span class="text-xs text-ink-faint w-6 text-center" x-text="gridCols + 'col'"></span>
+          <button @click="gridCols = Math.max(gridCols-1, 1)"
+            class="w-7 h-7 border border-warm bg-white flex items-center justify-center text-ink-light font-bold text-base leading-none hover:border-ink hover:text-ink transition-colors">+</button>
+        </div>
+      </div>
+
+      <!-- Vazio -->
+      <div x-show="items.length === 0" class="text-center py-16 text-ink-faint">
+        <p class="font-serif text-4xl mb-3">—</p>
+        <p class="font-medium text-sm tracking-wide">Nenhuma peça cadastrada</p>
+        <p class="text-xs mt-1">Use o botão <strong>+ Nova peça</strong> para começar</p>
+      </div>
+
+      <!-- VIEW: Lista compacta -->
+      <div x-show="catalogView==='compact' && items.length > 0" class="divide-y divide-warm bg-white border border-warm">
+        <template x-for="item in items" :key="item.id">
+          <div @click="handleItemClick(item)"
+            @pointerdown="startLongPress(item, $event)" @pointerup="cancelLongPress()" @pointermove="cancelLongPress()" @pointercancel="cancelLongPress()"
+            class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-cream transition-all select-none"
+            :class="item.enviado ? 'opacity-40' : ''">
+            <div class="w-9 h-9 flex-shrink-0 bg-cream-dark overflow-hidden">
+              <img x-show="item.foto" :src="item.foto" class="w-full h-full object-cover" />
+              <span x-show="!item.foto" class="w-full h-full flex items-center justify-center text-sm text-ink-faint">—</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate text-ink" x-text="item.nome || item.marca || item.tipo || 'Sem nome'"></p>
+              <p class="text-xs text-ink-faint truncate" x-text="[item.marca, item.tipo, item.tamanho].filter(Boolean).join(' · ')"></p>
+            </div>
+            <div class="text-right flex-shrink-0">
+              <template x-if="item.desconto && item.precoDesconto">
+                <div class="flex flex-col items-end gap-0.5">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xs line-through text-ink-faint" x-text="fmt(item.precoAnuncio)"></span>
+                    <span class="text-xs font-medium text-ink" x-text="fmt(item.precoDesconto)"></span>
+                  </div>
+                  <span class="text-[10px] font-medium text-white bg-ink px-1.5 py-0.5 leading-none"
+                    x-text="'-' + Math.round((1 - item.precoDesconto / item.precoAnuncio) * 100) + '%'"></span>
+                </div>
+              </template>
+              <template x-if="!(item.desconto && item.precoDesconto)">
+                <p class="text-xs font-medium text-ink" x-text="fmt(item.precoAnuncio || item.valorPago)"></p>
+              </template>
+              <span class="text-[10px] mt-0.5 inline-block" :class="statusColor(item.status)" x-text="item.status"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- VIEW: Lista padrão -->
+      <div x-show="catalogView==='list' && items.length > 0" class="space-y-2">
+        <template x-for="item in items" :key="item.id">
+          <div @click="handleItemClick(item)"
+            @pointerdown="startLongPress(item, $event)" @pointerup="cancelLongPress()" @pointermove="cancelLongPress()" @pointercancel="cancelLongPress()"
+            class="bg-white border border-warm flex gap-3 p-3 cursor-pointer hover:bg-cream transition-all select-none"
+            :class="item.enviado ? 'opacity-40' : ''">
+            <div class="w-20 h-20 flex-shrink-0 bg-cream-dark overflow-hidden">
+              <img x-show="item.foto" :src="item.foto" class="w-full h-full object-cover" />
+              <span x-show="!item.foto" class="w-full h-full flex items-center justify-center text-2xl text-ink-faint">—</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between gap-2">
+                <p class="font-medium text-sm truncate text-ink" x-text="item.nome || item.marca || item.tipo || 'Sem nome'"></p>
+                <span class="text-[10px] flex-shrink-0 px-1.5 py-0.5 border" :class="statusColor(item.status)" x-text="item.status"></span>
+              </div>
+              <p class="text-xs text-ink-faint mt-0.5 truncate" x-text="[item.tipo, item.cor, item.tamanho].filter(Boolean).join(' · ')"></p>
+              <p class="text-xs text-ink-light mt-1.5" x-text="'Pago: ' + fmt(item.valorPago)"></p>
+              <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <template x-if="item.desconto && item.precoDesconto">
+                  <span class="flex items-center gap-1.5">
+                    <span class="text-xs line-through text-ink-faint" x-text="fmt(item.precoAnuncio)"></span>
+                    <span class="text-xs font-medium text-ink" x-text="fmt(item.precoDesconto)"></span>
+                    <span class="text-[10px] font-medium text-white bg-ink px-1.5 py-0.5 leading-none"
+                      x-text="'-' + Math.round((1 - item.precoDesconto / item.precoAnuncio) * 100) + '%'"></span>
+                  </span>
+                </template>
+                <template x-if="!(item.desconto && item.precoDesconto) && item.precoAnuncio">
+                  <span class="text-xs font-medium text-ink" x-text="fmt(item.precoAnuncio)"></span>
+                </template>
+                <span x-show="item.valorVendido" class="text-xs text-emerald-700" x-text="'→ ' + fmt(item.valorVendido)"></span>
+              </div>
+              <p x-show="item.ajuste" class="text-[10px] text-amber-600 mt-1 tracking-wide">⚠ Ajuste pendente</p>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- VIEW: Matriz/Grade -->
+      <div x-show="catalogView==='grid' && items.length > 0"
+        class="grid gap-2"
+        :style="`grid-template-columns: repeat(${gridCols}, minmax(0, 1fr))`">
+        <template x-for="item in items" :key="item.id">
+          <div @click="handleItemClick(item)"
+            @pointerdown="startLongPress(item, $event)" @pointerup="cancelLongPress()" @pointermove="cancelLongPress()" @pointercancel="cancelLongPress()"
+            class="bg-white border border-warm overflow-hidden cursor-pointer transition-all select-none"
+            :class="item.enviado ? 'opacity-40' : 'hover:opacity-80'">
+            <div class="w-full bg-cream-dark overflow-hidden" :style="`aspect-ratio:1`">
+              <img x-show="item.foto" :src="item.foto" class="w-full h-full object-cover" />
+              <span x-show="!item.foto" class="w-full h-full flex items-center justify-center text-ink-faint"
+                :class="gridCols <= 2 ? 'text-4xl' : 'text-2xl'">—</span>
+            </div>
+            <div class="p-2">
+              <p class="font-medium truncate text-ink" :class="gridCols >= 4 ? 'text-[10px]' : 'text-xs'"
+                x-text="item.nome || item.marca || item.tipo || 'Sem nome'"></p>
+              <div class="flex items-center justify-between gap-1 mt-0.5 flex-wrap">
+                <template x-if="item.desconto && item.precoDesconto">
+                  <span class="flex items-center gap-1">
+                    <span class="text-[10px] line-through text-ink-faint" x-text="fmt(item.precoAnuncio)"></span>
+                    <span class="text-[10px] font-medium text-ink" x-text="fmt(item.precoDesconto)"></span>
+                  </span>
+                </template>
+                <span x-show="!(item.desconto && item.precoDesconto)" class="text-[10px] font-medium text-ink" x-text="fmt(item.precoAnuncio || item.valorPago)"></span>
+                <span class="text-[10px] border px-1 leading-none py-0.5" :class="statusColor(item.status)"
+                  x-show="gridCols <= 3" x-text="item.status.slice(0,3)"></span>
+              </div>
+              <p x-show="item.ajuste && gridCols <= 2" class="text-[10px] text-amber-600 mt-0.5">⚠ Ajuste</p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ===== DETALHE ===== -->
+    <div x-show="page === 'detail'" class="px-4 mt-3 space-y-4">
+      <template x-if="current">
+        <div>
+          <div class="w-full aspect-square bg-cream-dark overflow-hidden mb-4">
+            <img x-show="current.foto" :src="current.foto" class="w-full h-full object-cover" />
+            <span x-show="!current.foto" class="w-full h-full flex items-center justify-center text-7xl text-ink-faint">—</span>
+          </div>
+
+          <div class="flex items-start justify-between mb-4 gap-3">
+            <h2 class="font-serif text-2xl font-medium leading-snug" x-text="current.nome || current.marca || current.tipo || 'Peça'"></h2>
+            <span class="text-xs px-2 py-1 border flex-shrink-0 mt-1" :class="statusColor(current.status)" x-text="current.status"></span>
+          </div>
+
+          <div class="bg-white border border-warm divide-y divide-cream-dark">
+            <template x-for="[label, val] in detailFields()" :key="label">
+              <div class="flex justify-between px-4 py-3 text-sm" x-show="val">
+                <span class="text-ink-faint text-xs tracking-wide uppercase" x-text="label"></span>
+                <span class="font-medium text-right max-w-[55%] text-sm" x-text="val"></span>
+              </div>
+            </template>
+          </div>
+
+          <div x-show="current.observacoes" class="bg-white border border-warm px-4 py-3 mt-3">
+            <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Observações</p>
+            <p class="text-sm text-ink-light" x-text="current.observacoes"></p>
+          </div>
+
+          <div class="flex gap-2 mt-4">
+            <button @click="openForm(current)" class="flex-1 border border-ink text-ink text-sm font-medium py-3 tracking-wide hover:bg-ink hover:text-white transition-colors">Editar</button>
+            <button x-show="current.status !== 'Vendido'" @click="markSold()" class="flex-1 bg-emerald-700 text-white text-sm font-medium py-3 tracking-wide">Marcar vendido</button>
+            <button @click="deleteItem()" class="border border-warm text-ink-faint text-sm font-medium py-3 px-4 hover:border-red-300 hover:text-red-500 transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ===== FORMULÁRIO ===== -->
+    <div x-show="page === 'form'" class="px-4 mt-3 pb-6">
+      <form @submit.prevent="saveItem()" class="space-y-5">
+
+        <!-- Foto -->
+        <div class="flex flex-col items-center">
+          <div class="w-32 h-32 bg-cream-dark overflow-hidden mb-2 flex items-center justify-center">
+            <img x-show="form.foto" :src="form.foto" class="w-full h-full object-cover" />
+            <span x-show="!form.foto" class="text-4xl text-ink-faint">—</span>
+          </div>
+          <label class="text-ink-light text-xs font-medium tracking-widest uppercase cursor-pointer hover:text-ink transition-colors border-b border-current pb-0.5">
+            <span x-text="form.foto ? 'Trocar foto' : 'Adicionar foto'"></span>
+            <input type="file" accept="image/*" capture="environment" class="hidden" @change="handlePhoto($event)" />
+          </label>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Nome da peça</label>
+            <input x-model="form.nome" type="text" placeholder="Ex: Vestido floral manga longa..."
+              class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+          </div>
+
+          <div>
+            <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Marca</label>
+            <input x-model="form.marca" type="text" placeholder="Ex: Zara, Farm, sem marca..."
+              class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Tipo</label>
+              <select x-model="form.tipo" class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors">
+                <option value="">Selecione</option>
+                <option>Camiseta</option><option>Blusa</option><option>Calça</option><option>Shorts</option>
+                <option>Saia</option><option>Vestido</option><option>Casaco</option><option>Jaqueta</option>
+                <option>Moletom</option><option>Outro</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Tamanho</label>
+              <input x-model="form.tamanho" type="text" placeholder="P, M, G, 38..."
+                class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Cor</label>
+              <input x-model="form.cor" type="text" placeholder="Ex: azul marinho"
+                class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Condição</label>
+              <select x-model="form.condicao" class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors">
+                <option value="">Selecione</option>
+                <option>Novo com etiqueta</option><option>Ótimo estado</option>
+                <option>Bom estado</option><option>Com defeito</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Destinação</label>
+            <div class="flex gap-2">
+              <label class="flex-1 flex items-center gap-2 border px-3 py-2.5 cursor-pointer transition-colors text-sm"
+                :class="form.destinacao==='Vender' ? 'border-ink bg-ink text-white' : 'border-warm bg-white text-ink-light'">
+                <input type="radio" x-model="form.destinacao" value="Vender" class="hidden" /> Vender
+              </label>
+              <label class="flex-1 flex items-center gap-2 border px-3 py-2.5 cursor-pointer transition-colors text-sm"
+                :class="form.destinacao==='Uso pessoal' ? 'border-ink bg-ink text-white' : 'border-warm bg-white text-ink-light'">
+                <input type="radio" x-model="form.destinacao" value="Uso pessoal" class="hidden" /> Uso pessoal
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Status</label>
+            <select x-model="form.status" class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors">
+              <option>Estoque</option><option>Anunciado</option><option>Vendido</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Valor pago (R$)</label>
+              <input x-model="form.valorPago" type="number" step="0.01" min="0" placeholder="0,00"
+                class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+            </div>
+            <div x-show="form.destinacao === 'Vender' && (form.status === 'Anunciado' || form.status === 'Vendido')">
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Preço anúncio (R$)</label>
+              <input x-model="form.precoAnuncio" type="number" step="0.01" min="0" placeholder="0,00"
+                class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+            </div>
+            <div x-show="form.status === 'Vendido'">
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Valor vendido (R$)</label>
+              <input x-model="form.valorVendido" type="number" step="0.01" min="0" placeholder="0,00"
+                class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+            </div>
+          </div>
+
+          <!-- Desconto -->
+          <div x-show="form.destinacao === 'Vender' && (form.status === 'Anunciado' || form.status === 'Vendido')"
+            class="border border-warm bg-white p-3 space-y-3">
+            <label class="flex items-center gap-2.5 cursor-pointer">
+              <div @click="form.desconto = !form.desconto"
+                class="w-10 h-5 border transition-colors flex items-center px-0.5 flex-shrink-0"
+                :class="form.desconto ? 'bg-ink border-ink' : 'bg-white border-warm'">
+                <div class="w-4 h-4 bg-white border border-warm shadow-sm transition-transform"
+                  :class="form.desconto ? 'translate-x-5' : ''"></div>
+              </div>
+              <span class="text-sm text-ink-light">Aplicar desconto no anúncio</span>
+            </label>
+            <div x-show="form.desconto">
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Preço com desconto (R$)</label>
+              <input x-model="form.precoDesconto" type="number" step="0.01" min="0" placeholder="0,00"
+                class="w-full border border-warm bg-cream px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Data da compra</label>
+              <input x-model="form.dataCompra" type="date"
+                class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+            </div>
+            <div x-show="form.status === 'Vendido'">
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Data da venda</label>
+              <input x-model="form.dataVenda" type="date"
+                class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+            </div>
+          </div>
+
+          <div>
+            <label class="flex items-center gap-2.5 cursor-pointer">
+              <div @click="form.ajuste = !form.ajuste"
+                class="w-10 h-5 border transition-colors flex items-center px-0.5 flex-shrink-0"
+                :class="form.ajuste ? 'bg-ink border-ink' : 'bg-white border-warm'">
+                <div class="w-4 h-4 bg-white border border-warm shadow-sm transition-transform"
+                  :class="form.ajuste ? 'translate-x-5' : ''"></div>
+              </div>
+              <span class="text-sm text-ink-light">Precisa de ajuste</span>
+            </label>
+            <div x-show="form.ajuste" class="mt-2">
+              <input x-model="form.ajusteObs" type="text" placeholder="Descreva o ajuste necessário..."
+                class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+            </div>
+          </div>
+
+          <div x-show="form.status === 'Vendido'">
+            <label class="flex items-center gap-2.5 cursor-pointer">
+              <div @click="form.enviado = !form.enviado"
+                class="w-10 h-5 border transition-colors flex items-center px-0.5 flex-shrink-0"
+                :class="form.enviado ? 'bg-ink border-ink' : 'bg-white border-warm'">
+                <div class="w-4 h-4 bg-white border border-warm shadow-sm transition-transform"
+                  :class="form.enviado ? 'translate-x-5' : ''"></div>
+              </div>
+              <span class="text-sm text-ink-light">Enviado</span>
+            </label>
+          </div>
+
+          <div>
+            <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Observações</label>
+            <textarea x-model="form.observacoes" rows="3" placeholder="Detalhes adicionais..."
+              class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors resize-none"></textarea>
+          </div>
+        </div>
+
+        <button type="submit"
+          class="w-full bg-ink text-white text-sm font-medium py-4 tracking-widest uppercase hover:bg-ink-light transition-colors">
+          Salvar peça
+        </button>
+
+        <button x-show="form.id" type="button" @click="deleteItem()"
+          class="w-full border border-warm text-ink-faint text-sm font-medium py-3 tracking-wide hover:border-red-300 hover:text-red-500 transition-colors">
+          Excluir peça
+        </button>
+      </form>
+    </div>
+
+    <!-- ===== MODAL FILTROS ===== -->
+    <div x-show="filterModal" class="fixed inset-0 bg-ink/40 flex items-end z-20" @click.self="filterModal=false">
+      <div class="bg-white w-full p-5 shadow-xl space-y-5 max-h-[82vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-3 border-b border-warm">
+          <h3 class="font-serif text-lg">Filtrar peças</h3>
+          <button @click="clearFilters()" class="text-xs text-ink-light tracking-widest uppercase border-b border-current pb-0.5">Limpar</button>
+        </div>
+
+        <div>
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Status</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="s in ['Estoque','Anunciado','Vendido']" :key="s">
+              <button @click="filterState.status = filterState.status === s ? '' : s; loadItems()"
+                class="px-3 py-1.5 text-xs border transition-colors tracking-wide"
+                :class="filterState.status === s ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm'">
+                <span x-text="s"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Destinação</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="d in ['Vender','Uso pessoal']" :key="d">
+              <button @click="filterState.destinacao = filterState.destinacao === d ? '' : d; loadItems()"
+                class="px-3 py-1.5 text-xs border transition-colors tracking-wide"
+                :class="filterState.destinacao === d ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm'">
+                <span x-text="d"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Condição</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="c in ['Novo com etiqueta','Ótimo estado','Bom estado','Com defeito']" :key="c">
+              <button @click="filterState.condicao = filterState.condicao === c ? '' : c; loadItems()"
+                class="px-3 py-1.5 text-xs border transition-colors tracking-wide"
+                :class="filterState.condicao === c ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm'">
+                <span x-text="c"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div x-show="brandOptions.length > 0">
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Marca</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="b in brandOptions" :key="b">
+              <button @click="filterState.marca = filterState.marca === b ? '' : b; loadItems()"
+                class="px-3 py-1.5 text-xs border transition-colors tracking-wide"
+                :class="filterState.marca === b ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm'">
+                <span x-text="b"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Foto</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="f in [{label:'Com foto', value:'com'},{label:'Sem foto', value:'sem'}]" :key="f.value">
+              <button @click="filterState.foto = filterState.foto === f.value ? '' : f.value; loadItems()"
+                class="px-3 py-1.5 text-xs border transition-colors tracking-wide"
+                :class="filterState.foto === f.value ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm'">
+                <span x-text="f.label"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <div @click="filterState.ajuste = !filterState.ajuste; loadItems()"
+              class="w-10 h-5 border transition-colors flex items-center px-0.5"
+              :class="filterState.ajuste ? 'bg-ink border-ink' : 'bg-white border-warm'">
+              <div class="w-4 h-4 bg-white border border-warm shadow-sm transition-transform"
+                :class="filterState.ajuste ? 'translate-x-5' : ''"></div>
+            </div>
+            <span class="text-sm text-ink-light">Apenas peças que precisam de ajuste</span>
+          </label>
+        </div>
+
+        <button @click="filterModal=false"
+          class="w-full bg-ink text-white text-sm font-medium py-3.5 tracking-widest uppercase">
+          Ver resultados
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== CALCULADORA ===== -->
+    <div x-show="page === 'calc'" class="px-4 mt-3 pb-4 space-y-4">
+
+      <div class="bg-white border border-warm p-4 space-y-4">
+        <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Preço de venda</p>
+        <div>
+          <label class="block text-[10px] text-ink-faint tracking-widest uppercase mb-1.5">Preço anunciado (R$)</label>
+          <input x-model="calc.preco" type="number" step="0.01" min="0" placeholder="0,00" @input="calcResult()"
+            class="w-full border border-warm bg-cream px-3 py-3 text-2xl font-serif font-medium focus:outline-none focus:border-ink transition-colors" />
+        </div>
+        <div>
+          <label class="block text-[10px] text-ink-faint tracking-widest uppercase mb-1.5">Custo da peça (R$) — opcional</label>
+          <input x-model="calc.custo" type="number" step="0.01" min="0" placeholder="0,00" @input="calcResult()"
+            class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+        </div>
+      </div>
+
+      <div class="bg-white border border-warm p-4 space-y-3">
+        <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Modalidade</p>
+        <div class="grid grid-cols-2 gap-2">
+          <label @click="calc.modo='classico'; calcResult()"
+            class="flex flex-col items-center gap-1 border-2 p-3 cursor-pointer transition-colors"
+            :class="calc.modo==='classico' ? 'border-ink bg-ink text-white' : 'border-warm bg-white text-ink-light'">
+            <span class="font-serif text-xl font-medium">12%</span>
+            <span class="text-[10px] tracking-widest uppercase">Clássico</span>
+          </label>
+          <label @click="calc.modo='turbinado'; calcResult()"
+            class="flex flex-col items-center gap-1 border-2 p-3 cursor-pointer transition-colors"
+            :class="calc.modo==='turbinado' ? 'border-amber-600 bg-amber-600 text-white' : 'border-warm bg-white text-ink-light'">
+            <span class="font-serif text-xl font-medium">18%</span>
+            <span class="text-[10px] tracking-widest uppercase">Turbinado</span>
+          </label>
+        </div>
+
+        <label class="flex items-center justify-between cursor-pointer pt-1">
+          <div>
+            <p class="text-sm font-medium text-ink">Envio protegido</p>
+            <p class="text-xs text-ink-faint">Cobertura de frete opcional</p>
+          </div>
+          <div @click="calc.envioProtegido = !calc.envioProtegido; calcResult()"
+            class="w-10 h-5 border transition-colors flex items-center px-0.5 flex-shrink-0"
+            :class="calc.envioProtegido ? 'bg-ink border-ink' : 'bg-white border-warm'">
+            <div class="w-4 h-4 bg-white border border-warm shadow-sm transition-transform"
+              :class="calc.envioProtegido ? 'translate-x-5' : ''"></div>
+          </div>
+        </label>
+      </div>
+
+      <div class="bg-white border border-warm p-4 space-y-2" x-show="calc.preco > 0">
+        <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-3">Detalhamento</p>
+
+        <div class="flex justify-between text-sm py-2 border-b border-cream-dark">
+          <span class="text-ink-light">Preço de venda</span>
+          <span class="font-medium text-ink" x-text="fmt(calc.preco)"></span>
+        </div>
+        <div class="flex justify-between text-sm py-2 border-b border-cream-dark">
+          <span class="text-ink-light" x-text="'Comissão Enjoei (' + (calc.modo==='classico' ? '12%' : '18%') + ')'"></span>
+          <span class="font-medium text-red-600" x-text="'− ' + fmt(calc.r.comissao)"></span>
+        </div>
+        <div class="flex justify-between text-sm py-2 border-b border-cream-dark">
+          <span class="text-ink-light">Tarifa fixa</span>
+          <span class="font-medium text-red-600" x-text="'− ' + fmt(calc.r.tarifaFixa)"></span>
+        </div>
+        <div class="flex justify-between text-sm py-2 border-b border-cream-dark" x-show="calc.envioProtegido">
+          <span class="text-ink-light">Envio protegido</span>
+          <span class="font-medium text-red-600" x-text="'− ' + fmt(calc.r.envio)"></span>
+        </div>
+        <div class="flex justify-between text-sm py-2 border-b border-cream-dark">
+          <span class="text-ink-light">Total de taxas</span>
+          <span class="font-medium text-red-600" x-text="'− ' + fmt(calc.r.totalTaxas)"></span>
+        </div>
+
+        <div class="flex justify-between items-center pt-2">
+          <span class="font-medium text-sm tracking-wide text-ink">Valor líquido</span>
+          <span class="font-serif text-2xl font-medium" :class="calc.r.liquido >= 0 ? 'text-ink' : 'text-red-600'"
+            x-text="fmt(calc.r.liquido)"></span>
+        </div>
+
+        <div x-show="calc.custo > 0" class="flex justify-between items-center pt-2 border-t border-warm">
+          <span class="font-medium text-sm tracking-wide text-ink">Lucro após taxas</span>
+          <span class="font-serif text-2xl font-medium" :class="calc.r.lucro >= 0 ? 'text-emerald-700' : 'text-red-600'"
+            x-text="fmt(calc.r.lucro)"></span>
+        </div>
+
+        <div class="pt-3" x-show="calc.r.liquido > 0">
+          <p class="text-[10px] text-ink-faint tracking-widest uppercase mb-2">Distribuição</p>
+          <div class="w-full h-2 flex gap-px bg-cream-dark overflow-hidden">
+            <div class="h-full bg-red-400 transition-all"
+              :style="`width:${Math.round(calc.r.totalTaxas / calc.preco * 100)}%`"></div>
+            <div x-show="calc.custo > 0" class="h-full bg-amber-300 transition-all"
+              :style="`width:${Math.max(0, Math.round(calc.custo / calc.preco * 100))}%`"></div>
+            <div class="h-full bg-ink transition-all flex-1"></div>
+          </div>
+          <div class="flex gap-4 mt-2 flex-wrap">
+            <span class="text-[10px] text-ink-faint flex items-center gap-1.5"><span class="w-2 h-2 bg-red-400 inline-block"></span>Taxas (<span x-text="Math.round(calc.r.totalTaxas / calc.preco * 100) + '%'"></span>)</span>
+            <span x-show="calc.custo > 0" class="text-[10px] text-ink-faint flex items-center gap-1.5"><span class="w-2 h-2 bg-amber-300 inline-block"></span>Custo (<span x-text="Math.round(calc.custo / calc.preco * 100) + '%'"></span>)</span>
+            <span class="text-[10px] text-ink-faint flex items-center gap-1.5"><span class="w-2 h-2 bg-ink inline-block"></span>Líquido</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white border border-warm p-4" x-show="calc.preco > 0">
+        <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-3">Comparativo</p>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="border-2 p-3 text-center transition-colors" :class="calc.modo==='classico' ? 'border-ink' : 'border-warm'">
+            <p class="text-[10px] text-ink-faint tracking-widest uppercase mb-1">Clássico · 12%</p>
+            <p class="font-serif text-lg font-medium" :class="calc.modo==='classico' ? 'text-ink' : 'text-ink-light'"
+              x-text="fmt(calc.r.comparativo.classico)"></p>
+          </div>
+          <div class="border-2 p-3 text-center transition-colors" :class="calc.modo==='turbinado' ? 'border-amber-500' : 'border-warm'">
+            <p class="text-[10px] text-ink-faint tracking-widest uppercase mb-1">Turbinado · 18%</p>
+            <p class="font-serif text-lg font-medium" :class="calc.modo==='turbinado' ? 'text-amber-600' : 'text-ink-light'"
+              x-text="fmt(calc.r.comparativo.turbinado)"></p>
+          </div>
+        </div>
+        <p class="text-[10px] text-ink-faint mt-3 text-center">* Tarifa fixa estimada. Consulte valores atuais no Enjoei.</p>
+      </div>
+
+    </div>
+
+    <!-- ===== BACKUP ===== -->
+    <div x-show="page === 'backup'" class="px-4 mt-3 pb-4 space-y-4">
+
+      <div class="bg-white border border-warm p-4 space-y-3">
+        <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Exportar dados</p>
+        <p class="text-sm text-ink-light">Salva um arquivo de backup com todas as peças do catálogo, incluindo fotos.</p>
+        <button @click="exportJSON()"
+          class="w-full bg-ink text-white text-xs font-medium py-3.5 tracking-widest uppercase hover:bg-ink-light transition-colors flex items-center justify-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Exportar JSON — backup completo
+        </button>
+        <button @click="exportCSV()"
+          class="w-full border border-ink text-ink text-xs font-medium py-3 tracking-widest uppercase hover:bg-ink hover:text-white transition-colors flex items-center justify-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+          </svg>
+          Exportar CSV — planilha sem fotos
+        </button>
+      </div>
+
+      <div class="bg-white border border-warm p-4 space-y-3">
+        <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">Importar backup</p>
+        <p class="text-sm text-ink-light">Restaura peças a partir de um arquivo JSON. As peças são <strong class="text-ink">adicionadas</strong> ao catálogo atual — nada é apagado.</p>
+        <label class="w-full border border-dashed border-warm py-8 flex flex-col items-center gap-2 cursor-pointer hover:border-ink hover:bg-cream transition-colors">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span class="text-xs font-medium text-ink-light tracking-widest uppercase">Selecionar arquivo JSON</span>
+          <input type="file" accept=".json" class="hidden" @change="importJSON($event)" />
+        </label>
+      </div>
+
+      <div class="border border-warm bg-white p-4 space-y-2">
+        <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Boas práticas</p>
+        <p class="text-sm text-ink-light">— Exporte o JSON e guarde no Google Drive ou envie para si mesmo por e-mail</p>
+        <p class="text-sm text-ink-light">— Para trocar de celular, importe o arquivo no novo aparelho</p>
+        <p class="text-sm text-ink-light">— O CSV abre diretamente no Excel ou Google Sheets</p>
+        <p class="text-xs text-ink-faint mt-3">Os dados ficam salvos no Chrome (IndexedDB). Limpar o cache do navegador apaga tudo — faça backups com frequência.</p>
+      </div>
+
+    </div>
+
+    <!-- ===== MENU DE CONTEXTO (long press) ===== -->
+    <div x-show="ctxMenu.show" class="fixed inset-0 bg-ink/40 flex items-end z-50" @click.self="ctxMenu.show=false">
+      <div class="bg-white w-full shadow-xl">
+        <template x-if="ctxMenu.item">
+          <div>
+            <!-- Cabeçalho -->
+            <div class="px-5 py-4 border-b border-warm flex items-center justify-between">
+              <div>
+                <p class="font-medium text-sm text-ink" x-text="ctxMenu.item.nome || ctxMenu.item.marca || ctxMenu.item.tipo || 'Peça'"></p>
+                <p class="text-xs text-ink-faint mt-0.5" x-text="ctxMenu.item.status + (ctxMenu.item.enviado ? ' · Enviado' : '')"></p>
+              </div>
+              <button @click="ctxMenu.show=false" class="text-ink-faint hover:text-ink">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <!-- Peça enviada: só devolução -->
+            <template x-if="ctxMenu.item.enviado">
+              <div class="p-4">
+                <button @click="marcarDevolvida(ctxMenu.item)"
+                  class="w-full border border-amber-300 text-amber-700 text-sm font-medium py-3 tracking-wide hover:bg-amber-50 transition-colors">
+                  Marcar como devolvida
+                </button>
+                <p class="text-xs text-ink-faint text-center mt-2">A peça voltará ao status Anunciado</p>
+              </div>
+            </template>
+
+            <!-- Peça não enviada: ações completas -->
+            <template x-if="!ctxMenu.item.enviado">
+              <div class="p-4 space-y-4">
+                <!-- Status -->
+                <div>
+                  <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Mudar status</p>
+                  <div class="grid grid-cols-3 gap-2">
+                    <template x-for="s in ['Estoque','Anunciado','Vendido']" :key="s">
+                      <button @click="quickStatus(ctxMenu.item, s)"
+                        class="py-2.5 text-xs font-medium border tracking-wide transition-colors"
+                        :class="ctxMenu.item.status === s ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm hover:border-ink hover:text-ink'">
+                        <span x-text="s"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Enviado (só se Vendido) -->
+                <template x-if="ctxMenu.item.status === 'Vendido'">
+                  <div>
+                    <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Envio</p>
+                    <button @click="quickEnviado(ctxMenu.item)"
+                      class="w-full border border-ink text-ink text-xs font-medium py-2.5 tracking-wide hover:bg-ink hover:text-white transition-colors">
+                      Marcar como enviado
+                    </button>
+                  </div>
+                </template>
+
+                <!-- Desconto -->
+                <div>
+                  <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Preço</p>
+                  <button @click="openDiscountModal(ctxMenu.item)"
+                    class="w-full border border-warm text-ink-light text-xs font-medium py-2.5 tracking-wide hover:border-ink hover:text-ink transition-colors">
+                    Aplicar desconto
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ===== MODAL DESCONTO RÁPIDO ===== -->
+    <div x-show="discountModal.show" class="fixed inset-0 bg-ink/40 flex items-end z-50 px-4 pb-6" @click.self="discountModal.show=false">
+      <div class="bg-white w-full p-5 shadow-xl space-y-4">
+        <h3 class="font-serif text-xl">Aplicar desconto</h3>
+        <template x-if="discountModal.item">
+          <div class="space-y-4">
+            <div class="flex justify-between text-sm py-2 border-b border-cream-dark">
+              <span class="text-ink-faint">Preço original</span>
+              <span class="font-medium" x-text="fmt(discountModal.item.precoAnuncio || discountModal.item.valorPago)"></span>
+            </div>
+            <div>
+              <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Novo preço (R$)</label>
+              <input x-model="discountModal.newPrice" type="number" step="0.01" min="0" placeholder="0,00"
+                class="w-full border border-warm bg-cream px-3 py-2.5 text-xl font-serif font-medium focus:outline-none focus:border-ink transition-colors" />
+            </div>
+            <div x-show="discountModal.newPrice > 0 && discountModal.item.precoAnuncio > 0" class="text-center">
+              <span class="text-sm text-ink-faint">Desconto: </span>
+              <span class="font-semibold text-ink"
+                x-text="Math.round((1 - discountModal.newPrice / (discountModal.item.precoAnuncio || discountModal.item.valorPago)) * 100) + '%'"></span>
+            </div>
+            <div class="flex gap-2">
+              <button @click="discountModal.show=false" class="flex-1 border border-warm text-ink-light text-sm font-medium py-3 hover:border-ink hover:text-ink transition-colors">Cancelar</button>
+              <button @click="applyDiscount()" class="flex-1 bg-ink text-white text-sm font-medium py-3 tracking-widest uppercase">Aplicar</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ===== MODAL MARCAR VENDIDO ===== -->
+    <div x-show="soldModal" class="fixed inset-0 bg-ink/40 flex items-end z-20 px-4 pb-6" @click.self="soldModal=false">
+      <div class="bg-white w-full p-5 shadow-xl space-y-4">
+        <h3 class="font-serif text-xl">Marcar como vendido</h3>
+        <div>
+          <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Valor vendido (R$)</label>
+          <input x-model="soldValue" type="number" step="0.01" min="0" placeholder="0,00"
+            class="w-full border border-warm bg-cream px-3 py-2.5 focus:outline-none focus:border-ink transition-colors text-lg font-medium" />
+        </div>
+        <div>
+          <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Data da venda</label>
+          <input x-model="soldDate" type="date"
+            class="w-full border border-warm bg-white px-3 py-2.5 focus:outline-none focus:border-ink transition-colors" />
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button @click="soldModal=false" class="flex-1 border border-warm text-ink-light text-sm font-medium py-3 tracking-wide hover:border-ink hover:text-ink transition-colors">Cancelar</button>
+          <button @click="confirmSold()" class="flex-1 bg-emerald-700 text-white text-sm font-medium py-3 tracking-widest uppercase">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const db = new Dexie('brecho');
+    db.version(1).stores({ items: '++id, status, tipo, destinacao, ajuste' });
+
+    function app() {
+      return {
+        page: 'dashboard',
+        navStack: [],
+        ctxMenu: { show: false, item: null },
+        discountModal: { show: false, item: null, newPrice: '' },
+        _lpTimer: null,
+        items: [],
+        current: null,
+        stats: { estoque: 0, vendidas: 0, investido: 0, lucro: 0, ajustes: 0, porStatus: {} },
+        soldModal: false,
+        soldValue: '',
+        soldDate: '',
+        filterModal: false,
+        filterState: { status: '', destinacao: '', condicao: '', marca: '', ajuste: false, foto: '' },
+        sortField: 'id',
+        sortDir: 'desc',
+        brandOptions: [],
+        catalogView: 'list',
+        calc: {
+          preco: '', custo: '', modo: 'classico', envioProtegido: false,
+          r: { comissao:0, tarifaFixa:0, envio:0, totalTaxas:0, liquido:0, lucro:0, comparativo:{classico:0,turbinado:0} }
+        },
+        gridCols: 2,
+        chartPeriod: 'month',
+        chartMetric: 'qtd',
+        chartEmpty: true,
+        _chart: null,
+        form: {
+          id: null, nome: '', foto: '', marca: '', tipo: '', tamanho: '', cor: '',
+          condicao: '', destinacao: 'Vender', status: 'Estoque',
+          valorPago: '', precoAnuncio: '', desconto: false, precoDesconto: '',
+          valorVendido: '', dataCompra: '', dataVenda: '', ajuste: false, ajusteObs: '', observacoes: '', enviado: false
+        },
+
+        emptyForm() {
+          return {
+            id: null, nome: '', foto: '', marca: '', tipo: '', tamanho: '', cor: '',
+            condicao: '', destinacao: 'Vender', status: 'Estoque',
+            valorPago: '', precoAnuncio: '', desconto: false, precoDesconto: '',
+            valorVendido: '', dataCompra: '', dataVenda: '', ajuste: false, ajusteObs: '', observacoes: '', enviado: false
+          };
+        },
+
+        async init() {
+          await this.loadStats();
+          await this.loadItems();
+          await this.loadBrands();
+          await this.buildChart();
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+          }
+          this.$watch('form.status', (val, old) => {
+            if (val === 'Vendido' && old === 'Anunciado') {
+              const precoFinal = parseFloat(this.form.precoDesconto) || parseFloat(this.form.precoAnuncio) || 0;
+              if (precoFinal) this.form.valorVendido = precoFinal;
+            }
+          });
+        },
+
+        async buildChart() {
+          const all = await db.items.toArray();
+          const vendidas = all.filter(i => i.status === 'Vendido' && i.dataCompra);
+
+          const days = { week: 7, month: 30, quarter: 90, year: 365 }[this.chartPeriod];
+          const today = new Date();
+          today.setHours(23, 59, 59, 999);
+          const start = new Date(today);
+          start.setDate(start.getDate() - (days - 1));
+          start.setHours(0, 0, 0, 0);
+
+          const isoLabels = [];
+          const cur = new Date(start);
+          while (cur <= today) {
+            isoLabels.push(cur.toISOString().slice(0, 10));
+            cur.setDate(cur.getDate() + 1);
+          }
+
+          const byDate = {};
+          isoLabels.forEach(d => { byDate[d] = { qtd: 0, valor: 0, lucro: 0 }; });
+          vendidas.forEach(i => {
+            const d = i.dataCompra;
+            if (byDate[d]) {
+              byDate[d].qtd += 1;
+              byDate[d].valor += parseFloat(i.valorVendido) || 0;
+              byDate[d].lucro += (parseFloat(i.valorVendido) || 0) - (parseFloat(i.valorPago) || 0);
+            }
+          });
+
+          const metric = this.chartMetric;
+          const dataKey = metric === 'qtd' ? 'qtd' : metric === 'lucro' ? 'lucro' : 'valor';
+          const data = isoLabels.map(d => byDate[d][dataKey]);
+          this.chartEmpty = data.every(v => v === 0);
+
+          if (this._chart) { this._chart.destroy(); this._chart = null; }
+
+          const canvas = document.getElementById('salesChart');
+          if (!canvas) return;
+          canvas.style.display = this.chartEmpty ? 'none' : 'block';
+          if (this.chartEmpty) return;
+
+          const displayLabels = isoLabels.map(d => {
+            const [, m, day] = d.split('-');
+            return `${day}/${m}`;
+          });
+
+          const isQtd   = metric === 'qtd';
+          const isLucro = metric === 'lucro';
+          const color   = isLucro ? '#059669' : '#1C1C1C';
+          const bgColor = isLucro ? 'rgba(5,150,105,0.06)' : 'rgba(28,28,28,0.05)';
+
+          this._chart = new Chart(canvas, {
+            type: 'line',
+            data: {
+              labels: displayLabels,
+              datasets: [{
+                data,
+                borderColor: color,
+                backgroundColor: bgColor,
+                borderWidth: 1.5,
+                pointRadius: days <= 30 ? 2 : 0,
+                pointBackgroundColor: color,
+                fill: true,
+                tension: 0.3,
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              animation: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: ctx => isQtd
+                      ? ctx.parsed.y + ' venda(s)'
+                      : this.fmt(ctx.parsed.y)
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  ticks: { maxTicksLimit: days <= 7 ? 7 : days <= 30 ? 10 : 12, font: { size: 10 }, color: '#B8B0A4' },
+                  grid: { display: false },
+                  border: { color: '#E8E2D9' }
+                },
+                y: {
+                  beginAtZero: !isLucro,
+                  ticks: {
+                    font: { size: 10 },
+                    color: '#B8B0A4',
+                    precision: isQtd ? 0 : undefined,
+                    stepSize: isQtd ? 1 : undefined,
+                    callback: v => isQtd ? v : 'R$' + v
+                  },
+                  grid: { color: '#F0EBE4' },
+                  border: { color: '#E8E2D9' }
+                }
+              }
+            }
+          });
+        },
+
+        async loadBrands() {
+          const all = await db.items.toArray();
+          this.brandOptions = [...new Set(all.map(i => i.marca).filter(Boolean))].sort();
+        },
+
+        hasActiveFilters() {
+          const f = this.filterState;
+          return f.status || f.destinacao || f.condicao || f.marca || f.ajuste || f.foto;
+        },
+
+        clearFilters() {
+          this.filterState = { status: '', destinacao: '', condicao: '', marca: '', ajuste: false, foto: '' };
+          this.loadItems();
+        },
+
+        pageTitle() {
+          return { dashboard: 'MeuBrechó', catalog: 'Catálogo', detail: 'Detalhes', form: this.form.id ? 'Editar peça' : 'Nova peça', calc: 'Calculadora Enjoei', backup: 'Backup & Dados' }[this.page] || '';
+        },
+
+        calcTarifaFixa(preco) {
+          if (preco < 10)   return 1.00;
+          if (preco < 20)   return 1.50;
+          if (preco < 30)   return 2.00;
+          if (preco < 50)   return 2.50;
+          if (preco < 75)   return 3.00;
+          if (preco < 100)  return 3.50;
+          if (preco < 150)  return 4.00;
+          if (preco < 200)  return 5.00;
+          return 6.00;
+        },
+
+        calcLiquido(preco, taxa, comissaoVal, tarifaFixa, envioProtegido) {
+          const envio = envioProtegido
+            ? (comissaoVal > 25.63 ? (preco - 25.63) * 0.015 + 1.49 : 1.49)
+            : 0;
+          const totalTaxas = comissaoVal + tarifaFixa + envio;
+          return { envio, totalTaxas, liquido: preco - totalTaxas };
+        },
+
+        calcResult() {
+          const preco = parseFloat(this.calc.preco) || 0;
+          const custo = parseFloat(this.calc.custo) || 0;
+          if (preco <= 0) return;
+
+          const tarifaFixa = this.calcTarifaFixa(preco);
+          const comissaoC = preco * 0.12;
+          const comissaoT = preco * 0.18;
+          const modoAtual = this.calc.modo;
+          const comissao = modoAtual === 'classico' ? comissaoC : comissaoT;
+
+          const { envio, totalTaxas, liquido } = this.calcLiquido(preco, comissao, comissao, tarifaFixa, this.calc.envioProtegido);
+          const { liquido: liquidoC } = this.calcLiquido(preco, comissaoC, comissaoC, tarifaFixa, this.calc.envioProtegido);
+          const { liquido: liquidoT } = this.calcLiquido(preco, comissaoT, comissaoT, tarifaFixa, this.calc.envioProtegido);
+
+          this.calc.r = {
+            comissao, tarifaFixa, envio, totalTaxas, liquido,
+            lucro: liquido - custo,
+            comparativo: { classico: liquidoC, turbinado: liquidoT }
+          };
+        },
+
+        back() {
+          this.page = this.navStack.pop() || 'catalog';
+        },
+
+        startLongPress(item, e) {
+          this._lpFired = false;
+          this._lpTimer = setTimeout(() => {
+            this._lpFired = true;
+            this.ctxMenu = { show: true, item };
+          }, 500);
+        },
+
+        cancelLongPress() {
+          clearTimeout(this._lpTimer);
+        },
+
+        handleItemClick(item) {
+          if (this._lpFired) { this._lpFired = false; return; }
+          this.openDetail(item);
+        },
+
+        async quickStatus(item, status) {
+          const updated = { ...item, status };
+          if (status === 'Vendido' && !item.dataVenda) updated.dataVenda = new Date().toISOString().slice(0, 10);
+          if (status !== 'Vendido') { updated.valorVendido = null; updated.dataVenda = ''; updated.enviado = false; }
+          await db.items.put(updated);
+          await this.loadItems(); await this.loadStats(); await this.buildChart();
+          this.ctxMenu = { show: false, item: updated };
+        },
+
+        async quickEnviado(item) {
+          const updated = { ...item, enviado: true };
+          await db.items.put(updated);
+          await this.loadItems();
+          this.ctxMenu.show = false;
+        },
+
+        async marcarDevolvida(item) {
+          const updated = { ...item, status: 'Anunciado', enviado: false, valorVendido: null, dataVenda: '' };
+          await db.items.put(updated);
+          await this.loadItems(); await this.loadStats(); await this.buildChart();
+          this.ctxMenu.show = false;
+        },
+
+        openDiscountModal(item) {
+          this.discountModal = { show: true, item, newPrice: item.precoDesconto || '' };
+          this.ctxMenu.show = false;
+        },
+
+        async applyDiscount() {
+          const item = this.discountModal.item;
+          const newPrice = parseFloat(this.discountModal.newPrice) || 0;
+          if (!newPrice) return;
+          const updated = { ...item, desconto: true, precoDesconto: newPrice };
+          await db.items.put(updated);
+          await this.loadItems();
+          this.discountModal.show = false;
+        },
+
+        async loadItems() {
+          let all = await db.items.toArray();
+          const f = this.filterState;
+          if (f.status)     all = all.filter(i => i.status === f.status);
+          if (f.destinacao) all = all.filter(i => i.destinacao === f.destinacao);
+          if (f.condicao)   all = all.filter(i => i.condicao === f.condicao);
+          if (f.marca)      all = all.filter(i => i.marca === f.marca);
+          if (f.ajuste)     all = all.filter(i => !!i.ajuste);
+          if (f.foto === 'com') all = all.filter(i => !!i.foto);
+          if (f.foto === 'sem') all = all.filter(i => !i.foto);
+
+          const field = this.sortField;
+          all.sort((a, b) => {
+            const va = parseFloat(a[field]) || 0;
+            const vb = parseFloat(b[field]) || 0;
+            return this.sortDir === 'asc' ? va - vb : vb - va;
+          });
+
+          this.items = all;
+        },
+
+        async loadStats() {
+          const all = await db.items.toArray();
+          const vendidas = all.filter(i => i.status === 'Vendido');
+          const estoque = all.filter(i => i.status !== 'Vendido');
+          const totalInvestido = all.reduce((s, i) => s + (parseFloat(i.valorPago) || 0), 0);
+          const totalVendido = vendidas.reduce((s, i) => s + (parseFloat(i.valorVendido) || 0), 0);
+          const investidoVendido = vendidas.reduce((s, i) => s + (parseFloat(i.valorPago) || 0), 0);
+
+          const porStatus = {};
+          all.forEach(i => { porStatus[i.status] = (porStatus[i.status] || 0) + 1; });
+
+          this.stats = {
+            estoque: estoque.length,
+            vendidas: vendidas.length,
+            investido: totalInvestido,
+            lucro: totalVendido - investidoVendido,
+            ajustes: all.filter(i => i.ajuste).length,
+            porStatus
+          };
+        },
+
+        openForm(item) {
+          this.navStack.push(this.page);
+          if (item) {
+            this.form = { ...item };
+          } else {
+            this.form = this.emptyForm();
+            this.form.dataCompra = new Date().toISOString().slice(0, 10);
+          }
+          this.page = 'form';
+        },
+
+        openDetail(item) {
+          this.current = item;
+          this.navStack.push(this.page);
+          this.page = 'detail';
+        },
+
+        async saveItem() {
+          const data = { ...this.form };
+          data.valorPago = parseFloat(data.valorPago) || 0;
+          data.valorVendido = data.status === 'Vendido' ? (parseFloat(data.valorVendido) || 0) : null;
+          if (data.status === 'Vendido' && !data.dataVenda) data.dataVenda = new Date().toISOString().slice(0, 10);
+          if (data.status !== 'Vendido') data.dataVenda = '';
+          if (data.id) {
+            await db.items.put(data);
+          } else {
+            delete data.id;
+            await db.items.add(data);
+          }
+          await this.loadItems();
+          await this.loadStats();
+          await this.loadBrands();
+          await this.buildChart();
+          this.page = this.navStack.pop() || 'catalog';
+        },
+
+        async deleteItem() {
+          if (!confirm('Excluir esta peça?')) return;
+          const id = this.current?.id || this.form.id;
+          if (id) await db.items.delete(id);
+          await this.loadItems();
+          await this.loadStats();
+          this.page = 'catalog';
+          this.current = null;
+        },
+
+        markSold() {
+          this.soldValue = this.current.valorVendido || '';
+          this.soldDate = this.current.dataVenda || new Date().toISOString().slice(0, 10);
+          this.soldModal = true;
+        },
+
+        async confirmSold() {
+          const updated = { ...this.current, status: 'Vendido', valorVendido: parseFloat(this.soldValue) || 0, dataVenda: this.soldDate };
+          await db.items.put(updated);
+          this.current = updated;
+          await this.loadItems();
+          await this.loadStats();
+          await this.buildChart();
+          this.soldModal = false;
+        },
+
+        handlePhoto(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = ev => {
+            const img = new Image();
+            img.onload = () => {
+              const MAX = 800;
+              let w = img.width, h = img.height;
+              if (w > h && w > MAX) { h = h * MAX / w; w = MAX; }
+              else if (h > MAX) { w = w * MAX / h; h = MAX; }
+              const canvas = document.createElement('canvas');
+              canvas.width = w; canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              this.form.foto = canvas.toDataURL('image/jpeg', 0.8);
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        },
+
+        statusColor(status) {
+          return {
+            'Estoque':   'border-warm text-ink-faint',
+            'Anunciado': 'border-amber-300 text-amber-600',
+            'Vendido':   'border-emerald-300 text-emerald-700',
+          }[status] || 'border-warm text-ink-faint';
+        },
+
+        detailFields() {
+          const c = this.current;
+          if (!c) return [];
+          return [
+            ['Nome', c.nome],
+            ['Marca', c.marca],
+            ['Tipo', c.tipo],
+            ['Cor', c.cor],
+            ['Tamanho', c.tamanho],
+            ['Condição', c.condicao],
+            ['Destinação', c.destinacao],
+            ['Valor pago', c.valorPago ? this.fmt(c.valorPago) : null],
+            ['Preço anúncio', c.precoAnuncio ? this.fmt(c.precoAnuncio) : null],
+            ['Preço c/ desconto', (c.desconto && c.precoDesconto) ? this.fmt(c.precoDesconto) : null],
+            ['Valor vendido', c.valorVendido ? this.fmt(c.valorVendido) : null],
+            ['Lucro', (c.valorVendido && c.valorPago) ? this.fmt(c.valorVendido - c.valorPago) : null],
+            ['Data da compra', c.dataCompra ? new Date(c.dataCompra + 'T12:00').toLocaleDateString('pt-BR') : null],
+            ['Data da venda', c.dataVenda ? new Date(c.dataVenda + 'T12:00').toLocaleDateString('pt-BR') : null],
+            ['Ajuste necessário', c.ajuste ? (c.ajusteObs || 'Sim') : null],
+            ['Enviado', c.enviado ? 'Sim' : null],
+          ];
+        },
+
+        async exportJSON() {
+          const all = await db.items.toArray();
+          const blob = new Blob([JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), items: all }, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `meubrecho-backup-${new Date().toISOString().slice(0,10)}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+
+        async exportCSV() {
+          const all = await db.items.toArray();
+          const cols = ['id','nome','marca','tipo','cor','tamanho','condicao','destinacao','status','valorPago','precoAnuncio','precoDesconto','valorVendido','dataCompra','dataVenda','ajuste','ajusteObs','observacoes'];
+          const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+          const rows = [cols.join(';'), ...all.map(i => cols.map(c => esc(i[c])).join(';'))];
+          const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `meubrecho-${new Date().toISOString().slice(0,10)}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+
+        async importJSON(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+          const text = await file.text();
+          let parsed;
+          try { parsed = JSON.parse(text); } catch { alert('Arquivo inválido.'); return; }
+          const items = parsed.items ?? (Array.isArray(parsed) ? parsed : null);
+          if (!items) { alert('Formato não reconhecido.'); return; }
+          let count = 0;
+          for (const item of items) {
+            const { id, ...rest } = item;
+            await db.items.add(rest);
+            count++;
+          }
+          await this.loadItems();
+          await this.loadStats();
+          await this.loadBrands();
+          await this.buildChart();
+          e.target.value = '';
+          alert(`${count} peça(s) importada(s) com sucesso!`);
+        },
+
+        fmt(val) {
+          return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+        }
+      };
+    }
+  </script>
+</body>
+</html>
