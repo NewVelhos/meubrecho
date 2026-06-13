@@ -1506,12 +1506,15 @@
           };
           const auth = { 'Authorization': 'Bearer ' + this.trends.token };
           const authProxy = { ...auth, 'atproto-proxy': 'did:web:api.bsky.app#bsky_appview' };
+          const now = Date.now(); const DAY = 86400000;
+          const since = new Date(now - 7*DAY).toISOString().slice(0,10);
+          const until = new Date(now + DAY).toISOString().slice(0,10);
           const B = 'https://bsky.social/xrpc/app.bsky.feed.searchPosts?limit=5&q=brech%C3%B3';
-          const P = 'https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?limit=5&q=brech%C3%B3';
-          await tryCall('A) bsky.social + proxy', B, authProxy);
-          await tryCall('B) bsky.social sem proxy', B, auth);
-          await tryCall('C) public sem auth', P, {});
-          await tryCall('D) public + auth', P, auth);
+          const BD = `${B}&since=${since}&until=${until}`;
+          const BDT = `https://bsky.social/xrpc/app.bsky.feed.searchPosts?limit=5&q=brech%C3%B3&since=${since}T00:00:00Z&until=${until}T23:59:59Z`;
+          await tryCall('A) sem data', B, authProxy);
+          await tryCall('B) com data YYYY-MM-DD', BD, authProxy);
+          await tryCall('C) com data ISO full', BDT, authProxy);
           alert(lines.join('\n\n'));
         },
 
