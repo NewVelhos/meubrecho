@@ -1417,7 +1417,7 @@
         async bskyCount(query, since, until) {
           const u = new URL('https://bsky.social/xrpc/app.bsky.feed.searchPosts');
           u.searchParams.set('q', query);
-          u.searchParams.set('limit', '1');
+          u.searchParams.set('limit', '100');
           u.searchParams.set('since', since);
           u.searchParams.set('until', until);
           const r = await fetch(u, { headers: { 'Authorization': 'Bearer ' + this.trends.token, 'atproto-proxy': 'did:web:api.bsky.app#bsky_appview' } });
