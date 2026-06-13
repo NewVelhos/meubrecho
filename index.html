@@ -1442,7 +1442,7 @@
           const days = this.windowDays(w);
           const DAY = 86400000;
           const now = Date.now();
-          const fmtD = (ms) => new Date(ms).toISOString().slice(0, 10);
+          const fmtD = (ms) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
           const curUntil = fmtD(now + DAY);
           const curSince = fmtD(now - days * DAY);
           const prevUntil = curSince;
