@@ -46,7 +46,7 @@
   <header class="bg-white border-b border-warm px-5 py-3.5 flex items-center sticky top-0 z-10">
     <!-- Esquerda: voltar ou nome da seção -->
     <div class="flex-1 flex items-center gap-2">
-      <button x-show="page !== 'dashboard' && page !== 'catalog' && page !== 'trends'" @click="back()" class="text-ink-light hover:text-ink transition-colors flex-shrink-0">
+      <button x-show="page !== 'dashboard' && page !== 'catalog'" @click="back()" class="text-ink-light hover:text-ink transition-colors flex-shrink-0">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M19 12H5M5 12l7-7M5 12l7 7"/>
         </svg>
@@ -105,14 +105,6 @@
         <circle cx="16" cy="18" r="0.8" fill="currentColor" stroke="none"/>
       </svg>
       Calc
-    </button>
-    <button @click="page='trends'; if(trends.authed) loadTrends()"
-      class="flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-medium tracking-widest uppercase transition-colors"
-      :class="page==='trends' ? 'text-ink' : 'text-ink-faint'">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/>
-      </svg>
-      Trends
     </button>
   </nav>
 
@@ -1051,106 +1043,6 @@
       </div>
     </div>
 
-    <!-- ===== TENDÊNCIAS ===== -->
-    <div x-show="page === 'trends'" class="px-4 mt-3 pb-4 space-y-4">
-
-      <!-- Login -->
-      <template x-if="!trends.authed">
-        <div class="bg-white border border-warm p-5 space-y-4">
-          <div>
-            <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1">Tendências de moda</p>
-            <p class="text-sm text-ink-light">Conecte sua conta do Bluesky para medir o que está em alta. Use uma <strong class="text-ink">app password</strong> (senha secundária revogável), nunca sua senha principal.</p>
-          </div>
-          <div>
-            <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">Handle</label>
-            <input x-model="trends.handle" type="text" placeholder="seuusuario.bsky.social" autocomplete="username"
-              class="w-full border border-warm px-3 py-2.5 text-sm focus:border-ink outline-none" />
-          </div>
-          <div>
-            <label class="block text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-1.5">App password</label>
-            <input x-model="trends.appPassword" type="password" placeholder="xxxx-xxxx-xxxx-xxxx" autocomplete="off"
-              class="w-full border border-warm px-3 py-2.5 text-sm focus:border-ink outline-none" />
-            <p class="text-[10px] text-ink-faint mt-1.5">Crie em Bluesky → Settings → Privacy and security → App passwords. Fica salva só neste navegador.</p>
-          </div>
-          <p x-show="trends.loginError" x-text="trends.loginError" class="text-xs text-red-600"></p>
-          <button @click="bskyLogin()" :disabled="trends.loading"
-            class="w-full bg-ink text-white text-xs font-medium py-3.5 tracking-widest uppercase hover:bg-ink-light transition-colors disabled:opacity-40">
-            <span x-text="trends.loading ? 'Conectando...' : 'Conectar'"></span>
-          </button>
-        </div>
-      </template>
-
-      <!-- Conectado -->
-      <template x-if="trends.authed">
-        <div class="space-y-4">
-
-          <div class="flex items-center justify-between">
-            <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase">
-              <span x-text="'@' + trends.userHandle"></span>
-            </p>
-            <button @click="bskyLogout()" class="text-[10px] text-ink-faint hover:text-ink tracking-widest uppercase underline">Sair</button>
-          </div>
-
-          <!-- Seletor de recorte -->
-          <div class="flex gap-1.5">
-            <template x-for="w in [{l:'Dia',v:'dia'},{l:'Semana',v:'semana'},{l:'Mês',v:'mes'},{l:'Semestre',v:'semestre'}]" :key="w.v">
-              <button @click="trends.window = w.v; loadTrends()"
-                class="flex-1 px-2 py-2 text-xs font-medium tracking-wide border transition-colors"
-                :class="trends.window === w.v ? 'bg-ink text-white border-ink' : 'bg-white text-ink-light border-warm'">
-                <span x-text="w.l"></span>
-              </button>
-            </template>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <p class="text-[10px] text-ink-faint">~ volume estimado · vs. período anterior</p>
-            <button @click="loadTrends(true)" :disabled="trends.loading" class="text-[10px] text-ink-faint hover:text-ink tracking-widest uppercase underline disabled:opacity-40">Atualizar</button>
-          </div>
-
-          <button @click="bskyDebug()" class="w-full border border-warm text-ink-light text-[10px] py-2 tracking-widest uppercase">Diagnóstico</button>
-
-          <!-- Carregando -->
-          <div x-show="trends.loading" class="bg-white border border-warm p-4">
-            <p class="text-xs text-ink-light" x-text="'Carregando... ' + trends.progress + '/' + trends.total"></p>
-            <div class="h-1 bg-cream-dark mt-2 overflow-hidden">
-              <div class="h-full bg-ink transition-all" :style="'width:' + (trends.total ? (trends.progress/trends.total*100) : 0) + '%'"></div>
-            </div>
-          </div>
-
-          <p x-show="trends.error" x-text="trends.error" class="text-xs text-red-600 bg-white border border-warm p-3"></p>
-
-          <!-- Ranking -->
-          <div x-show="trends.results.length" class="bg-white border border-warm divide-y divide-cream-dark">
-            <template x-for="(t, i) in trends.results" :key="t.term">
-              <div class="flex items-center gap-3 px-4 py-3">
-                <span class="text-[10px] text-ink-faint font-medium w-4 text-right" x-text="i+1"></span>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm text-ink truncate" x-text="t.label"></p>
-                  <p class="text-[10px] text-ink-faint" x-text="'~' + t.current + ' posts'"></p>
-                </div>
-                <span class="text-xs font-medium tabular-nums"
-                  :class="t.growth === null ? 'text-ink-faint' : (t.growth > 0 ? 'text-emerald-700' : (t.growth < 0 ? 'text-red-600' : 'text-ink-faint'))"
-                  x-text="t.growth === null ? 'novo' : ((t.growth > 0 ? '▲ ' : (t.growth < 0 ? '▼ ' : '— ')) + Math.abs(t.growth) + '%')"></span>
-              </div>
-            </template>
-          </div>
-
-          <!-- Descoberta -->
-          <div x-show="trends.discovery.length" class="bg-white border border-warm p-4">
-            <p class="text-[10px] text-ink-faint font-medium tracking-widest uppercase mb-2">Descoberta · em alta no Bluesky</p>
-            <div class="flex flex-wrap gap-2">
-              <template x-for="d in trends.discovery" :key="d">
-                <span class="text-xs text-ink-light border border-warm px-2.5 py-1" x-text="d"></span>
-              </template>
-            </div>
-          </div>
-
-          <p class="text-[10px] text-ink-faint text-center px-4">Termômetro do Bluesky — uma fatia da internet, não o Brasil inteiro. O sinal útil é o movimento relativo (subiu/caiu). Semestre tende a vir ralo.</p>
-        </div>
-      </template>
-
-    </div>
-
   </main>
 
   <script>
@@ -1165,18 +1057,6 @@
         ctxMenu: { show: false, item: null },
         discountModal: { show: false, item: null, newPrice: '' },
         freteModal: { show: false, item: null },
-        trends: {
-          authed: false, handle: '', appPassword: '', token: '', refresh: '', did: '', userHandle: '',
-          window: 'semana', loading: false, loginError: '', error: '',
-          results: [], discovery: [], progress: 0, total: 0
-        },
-        bskyTerms: [
-          { q: 'brechó' }, { q: 'garimpo' }, { q: 'desapego' }, { q: 'second hand' }, { q: 'thrift' },
-          { q: 'y2k' }, { q: 'coquette' }, { q: 'gorpcore' }, { q: 'cottagecore' }, { q: 'balletcore' },
-          { q: 'streetwear' }, { q: 'vintage' }, { q: 'boho' }, { q: 'grunge' }, { q: 'old money' },
-          { q: 'alfaiataria' }, { q: 'tricô' }, { q: 'sobretudo' }, { q: 'cropped' }, { q: 'jaqueta jeans' },
-          { q: 'saia midi' }, { q: 'blazer', anchor: true }, { q: 'vestido', anchor: true }, { q: 'look do dia' }
-        ],
         _lpTimer: null,
         menuDrawer: false,
         items: [],
@@ -1221,7 +1101,6 @@
           await this.loadItems();
           await this.loadBrands();
           await this.buildChart();
-          this.restoreBskySession();
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').catch(() => {});
           }
@@ -1352,180 +1231,7 @@
         },
 
         pageTitle() {
-          return { dashboard: 'MeuBrechó', catalog: 'Catálogo', detail: 'Detalhes', form: this.form.id ? 'Editar' : 'Nova peça', calc: 'Calculadora', backup: 'Backup', trends: 'Tendências' }[this.page] || '';
-        },
-
-        // ===== Bluesky / Tendências =====
-        restoreBskySession() {
-          try {
-            const s = JSON.parse(localStorage.getItem('bsky_session') || 'null');
-            if (s && s.token) {
-              this.trends.token = s.token;
-              this.trends.refresh = s.refresh;
-              this.trends.did = s.did;
-              this.trends.userHandle = s.handle;
-              this.trends.authed = true;
-            }
-          } catch (e) {}
-        },
-
-        async bskyLogin() {
-          this.trends.loginError = '';
-          const id = this.trends.handle.trim().replace(/^@/, '');
-          if (!id || !this.trends.appPassword) { this.trends.loginError = 'Preencha handle e app password.'; return; }
-          this.trends.loading = true;
-          try {
-            const r = await fetch('https://bsky.social/xrpc/com.atproto.server.createSession', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ identifier: id, password: this.trends.appPassword })
-            });
-            if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.message || ('HTTP ' + r.status)); }
-            const d = await r.json();
-            this.trends.token = d.accessJwt; this.trends.refresh = d.refreshJwt;
-            this.trends.did = d.did; this.trends.userHandle = d.handle;
-            this.trends.authed = true; this.trends.appPassword = '';
-            localStorage.setItem('bsky_session', JSON.stringify({ token: d.accessJwt, refresh: d.refreshJwt, did: d.did, handle: d.handle }));
-            this.trends.loading = false;
-            await this.loadTrends(true);
-          } catch (e) {
-            this.trends.loginError = 'Falha no login: ' + e.message;
-            this.trends.loading = false;
-          }
-        },
-
-        bskyLogout() {
-          localStorage.removeItem('bsky_session');
-          Object.assign(this.trends, { authed: false, token: '', refresh: '', did: '', userHandle: '', appPassword: '', results: [], discovery: [], error: '' });
-        },
-
-        async bskyRefresh() {
-          if (!this.trends.refresh) return false;
-          try {
-            const r = await fetch('https://bsky.social/xrpc/com.atproto.server.refreshSession', {
-              method: 'POST', headers: { 'Authorization': 'Bearer ' + this.trends.refresh }
-            });
-            if (!r.ok) return false;
-            const d = await r.json();
-            this.trends.token = d.accessJwt; this.trends.refresh = d.refreshJwt;
-            localStorage.setItem('bsky_session', JSON.stringify({ token: d.accessJwt, refresh: d.refreshJwt, did: d.did, handle: d.handle }));
-            return true;
-          } catch (e) { return false; }
-        },
-
-        windowDays(w) { return { dia: 1, semana: 7, mes: 30, semestre: 180 }[w] || 7; },
-
-        async bskyCount(query, since, until) {
-          const u = new URL('https://bsky.social/xrpc/app.bsky.feed.searchPosts');
-          u.searchParams.set('q', query);
-          u.searchParams.set('limit', '100');
-          u.searchParams.set('since', since);
-          u.searchParams.set('until', until);
-          const r = await fetch(u, { headers: { 'Authorization': 'Bearer ' + this.trends.token, 'atproto-proxy': 'did:web:api.bsky.app#bsky_appview' } });
-          if (r.status === 401) throw { code: 401 };
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          const d = await r.json();
-          if (typeof d.hitsTotal === 'number') return d.hitsTotal;
-          return (d.posts || []).length;
-        },
-
-        async loadTrends(force = false) {
-          if (!this.trends.authed) return;
-          const w = this.trends.window;
-          const cacheKey = 'trends_cache_' + w;
-          if (!force) {
-            try {
-              const c = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-              if (c && (Date.now() - c.ts) < 3600000) { this.trends.results = c.results; this.trends.discovery = c.discovery || []; return; }
-            } catch (e) {}
-          }
-          this.trends.loading = true; this.trends.error = ''; this.trends.results = []; this.trends.progress = 0;
-          const days = this.windowDays(w);
-          const DAY = 86400000;
-          const now = Date.now();
-          const fmtD = (ms) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
-          const curUntil = fmtD(now + DAY);
-          const curSince = fmtD(now - days * DAY);
-          const prevUntil = curSince;
-          const prevSince = fmtD(now - 2 * days * DAY);
-          const terms = this.bskyTerms;
-          this.trends.total = terms.length;
-          const out = [];
-          try {
-            for (const t of terms) {
-              const q = t.anchor ? `${t.q} (look OR outfit OR moda OR brechó OR estilo OR ootd)` : t.q;
-              let cur = 0, prev = 0;
-              try {
-                cur = await this.bskyCount(q, curSince, curUntil);
-                prev = await this.bskyCount(q, prevSince, prevUntil);
-              } catch (err) {
-                if (err && err.code === 401) {
-                  const ok = await this.bskyRefresh();
-                  if (ok) {
-                    cur = await this.bskyCount(q, curSince, curUntil);
-                    prev = await this.bskyCount(q, prevSince, prevUntil);
-                  } else {
-                    this.trends.authed = false;
-                    this.trends.error = 'Sessão expirada. Conecte novamente.';
-                    this.trends.loading = false;
-                    return;
-                  }
-                }
-              }
-              const growth = prev > 0 ? Math.round((cur / prev - 1) * 100) : (cur > 0 ? null : 0);
-              out.push({ term: t.q, label: t.label || t.q, current: cur, growth });
-              this.trends.progress++;
-              this.trends.results = [...out].sort((a, b) => b.current - a.current);
-              await new Promise(res => setTimeout(res, 120));
-            }
-            await this.loadDiscovery();
-            localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), results: this.trends.results, discovery: this.trends.discovery }));
-          } catch (e) {
-            this.trends.error = 'Erro ao carregar: ' + e.message;
-          } finally {
-            this.trends.loading = false;
-          }
-        },
-
-        async bskyDebug() {
-          const lines = [];
-          const tryCall = async (label, url, headers) => {
-            try {
-              const r = await fetch(url, { headers });
-              const ct = r.headers.get('content-type') || '';
-              let body = '';
-              if (ct.includes('json')) {
-                const d = await r.json();
-                body = 'hitsTotal=' + d.hitsTotal + ' posts=' + (d.posts ? d.posts.length : 'n/a') + ' err=' + (d.error || '-');
-              } else {
-                body = (await r.text()).slice(0, 80);
-              }
-              lines.push(label + ': HTTP ' + r.status + ' | ' + body);
-            } catch (e) {
-              lines.push(label + ': EXCEÇÃO ' + e.message);
-            }
-          };
-          const auth = { 'Authorization': 'Bearer ' + this.trends.token };
-          const authProxy = { ...auth, 'atproto-proxy': 'did:web:api.bsky.app#bsky_appview' };
-          const now = Date.now(); const DAY = 86400000;
-          const since = new Date(now - 7*DAY).toISOString().slice(0,10);
-          const until = new Date(now + DAY).toISOString().slice(0,10);
-          const B = 'https://bsky.social/xrpc/app.bsky.feed.searchPosts?limit=5&q=brech%C3%B3';
-          const BD = `${B}&since=${since}&until=${until}`;
-          const BDT = `https://bsky.social/xrpc/app.bsky.feed.searchPosts?limit=5&q=brech%C3%B3&since=${since}T00:00:00Z&until=${until}T23:59:59Z`;
-          await tryCall('A) sem data', B, authProxy);
-          await tryCall('B) com data YYYY-MM-DD', BD, authProxy);
-          await tryCall('C) com data ISO full', BDT, authProxy);
-          alert(lines.join('\n\n'));
-        },
-
-        async loadDiscovery() {
-          try {
-            const r = await fetch('https://public.api.bsky.app/xrpc/app.bsky.unspecced.getTrendingTopics?limit=25');
-            if (!r.ok) return;
-            const d = await r.json();
-            const FASH = /moda|fashion|style|outfit|look|thrift|vintage|brech|dress|wear|estilo|coquette|y2k/i;
-            this.trends.discovery = (d.topics || []).map(t => t.topic).filter(t => FASH.test(t)).slice(0, 8);
-          } catch (e) {}
+          return { dashboard: 'MeuBrechó', catalog: 'Catálogo', detail: 'Detalhes', form: this.form.id ? 'Editar' : 'Nova peça', calc: 'Calculadora', backup: 'Backup' }[this.page] || '';
         },
 
         calcTarifaFixa(preco) {
