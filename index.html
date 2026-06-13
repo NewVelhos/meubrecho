@@ -1107,6 +1107,8 @@
             <button @click="loadTrends(true)" :disabled="trends.loading" class="text-[10px] text-ink-faint hover:text-ink tracking-widest uppercase underline disabled:opacity-40">Atualizar</button>
           </div>
 
+          <button @click="bskyDebug()" class="w-full border border-warm text-ink-light text-[10px] py-2 tracking-widest uppercase">Diagnóstico</button>
+
           <!-- Carregando -->
           <div x-show="trends.loading" class="bg-white border border-warm p-4">
             <p class="text-xs text-ink-light" x-text="'Carregando... ' + trends.progress + '/' + trends.total"></p>
@@ -1482,6 +1484,35 @@
           } finally {
             this.trends.loading = false;
           }
+        },
+
+        async bskyDebug() {
+          const lines = [];
+          const tryCall = async (label, url, headers) => {
+            try {
+              const r = await fetch(url, { headers });
+              const ct = r.headers.get('content-type') || '';
+              let body = '';
+              if (ct.includes('json')) {
+                const d = await r.json();
+                body = 'hitsTotal=' + d.hitsTotal + ' posts=' + (d.posts ? d.posts.length : 'n/a') + ' err=' + (d.error || '-');
+              } else {
+                body = (await r.text()).slice(0, 80);
+              }
+              lines.push(label + ': HTTP ' + r.status + ' | ' + body);
+            } catch (e) {
+              lines.push(label + ': EXCEÇÃO ' + e.message);
+            }
+          };
+          const auth = { 'Authorization': 'Bearer ' + this.trends.token };
+          const authProxy = { ...auth, 'atproto-proxy': 'did:web:api.bsky.app#bsky_appview' };
+          const B = 'https://bsky.social/xrpc/app.bsky.feed.searchPosts?limit=5&q=brech%C3%B3';
+          const P = 'https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?limit=5&q=brech%C3%B3';
+          await tryCall('A) bsky.social + proxy', B, authProxy);
+          await tryCall('B) bsky.social sem proxy', B, auth);
+          await tryCall('C) public sem auth', P, {});
+          await tryCall('D) public + auth', P, auth);
+          alert(lines.join('\n\n'));
         },
 
         async loadDiscovery() {
