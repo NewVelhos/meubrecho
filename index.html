@@ -1418,7 +1418,7 @@
           u.searchParams.set('limit', '1');
           u.searchParams.set('since', since);
           u.searchParams.set('until', until);
-          const r = await fetch(u, { headers: { 'Authorization': 'Bearer ' + this.trends.token } });
+          const r = await fetch(u, { headers: { 'Authorization': 'Bearer ' + this.trends.token, 'atproto-proxy': 'did:web:api.bsky.app#bsky_appview' } });
           if (r.status === 401) throw { code: 401 };
           if (!r.ok) throw new Error('HTTP ' + r.status);
           const d = await r.json();
